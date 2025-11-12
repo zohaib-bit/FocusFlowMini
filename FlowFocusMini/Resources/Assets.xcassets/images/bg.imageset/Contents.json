@@ -1,0 +1,12 @@
+{
+  "images" : [
+    {
+      "filename" : "Sign in.pdf",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}
