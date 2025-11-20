@@ -11,7 +11,7 @@ import SwiftUI
 struct FlowFocusMiniApp: App {
     var body: some Scene {
         WindowGroup {
-            SplashScreen()
+            RootView()
         }
     }
 }

@@ -12,6 +12,7 @@ import SwiftUI
 final class OnboardingViewModel: ObservableObject{
    
     @Published var currentIndex: Int = 0
+    @Published var shouldNavigateToHome: Bool = false
     
     
     // Data Source
@@ -40,8 +41,10 @@ final class OnboardingViewModel: ObservableObject{
             }
         } else{
         
-            print("Navigate to Home Screen")
-
+            withAnimation {
+                shouldNavigateToHome = true
+            }
+            
         }
     }
     
