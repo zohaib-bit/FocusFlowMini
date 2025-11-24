@@ -16,7 +16,7 @@ struct ProfileView: View {
             
             VStack {
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 25) {
+                    VStack(spacing: 0) {
                         
                         Header()
                             .padding(.horizontal, 20)
@@ -30,6 +30,7 @@ struct ProfileView: View {
                         .padding(.horizontal, 20)
                         
                         ProfileMenuList()
+                            .padding(.top, 20)
                             .padding(.bottom, 120)  // for bottom nav
 
 
@@ -146,8 +147,6 @@ private struct ProfileMenuList: View {
             NavigationRow(icon: "person.2", title: "Friend") {
                 print("Go to friends")
             }
-            
-
             
             NavigationRow(icon: "questionmark.bubble", title: "Support") {
                 print("Go to support")

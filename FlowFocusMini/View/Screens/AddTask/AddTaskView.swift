@@ -1,32 +1,83 @@
+//
+// AddTaskView.swift
+// FlowFocusMini
+//
+// Created by o9tech on 21/11/2025.
+//
+
 import SwiftUI
 
 struct AddTaskView: View {
+    @EnvironmentObject private var viewModel: TaskViewModel
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+
+    // --- Form fields
+    @State private var aiInput: String = ""              // NEW: where user types natural language for AI
     @State private var taskGroup = "Work"
     @State private var projectName = ""
     @State private var description = ""
     @State private var startDate = Date()
     @State private var endDate = Date()
-    
+
+    // --- UI state
     @State private var showTaskGroupDropdown = false
     @State private var showStartDatePicker = false
     @State private var showEndDatePicker = false
-    
+    @State private var showSuccessAlert = false
+    @State private var showErrorAlert = false
+    @State private var showAIErrorAlert = false
+
     let taskGroups = ["Work", "Personal", "Health", "Finance"]
-    
+
     var body: some View {
         ZStack {
             Background()
                 .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
 
+            VStack(spacing: 0) {
                 Header()
                     .padding(.horizontal, 20)
                     .padding(.top, 50)
 
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
-                        
+
+                        // ===== NEW: AI Input Field
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("AI Input")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+
+                            TextField("Describe the task (e.g. 'Create Task for client tomorrow 5pm for Marketing project')", text: $aiInput, axis: .vertical)
+                                .padding(12)
+                                .background(Color.white)
+                                .cornerRadius(12)
+
+                            HStack {
+                                Spacer()
+                                // Generate with AI button
+                                Button(action: generateWithAI) {
+                                    if viewModel.isGeneratingWithAI {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle())
+                                            .frame(height: 36)
+                                            .frame(maxWidth: 140)
+                                    } else {
+                                        Text("Generate with AI")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .frame(height: 36)
+                                            .frame(maxWidth: 140)
+                                    }
+                                }
+                                .disabled(aiInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isGeneratingWithAI)
+                                .background(viewModel.isGeneratingWithAI ? Color.gray.opacity(0.4) : Color.appPrimary)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                            }
+                        }
+
+                        // ===== Existing Form Fields (kept intact)
                         TaskGroupDropdown(
                             selectedGroup: $taskGroup,
                             isExpanded: $showTaskGroupDropdown,
@@ -55,7 +106,7 @@ struct AddTaskView: View {
                     .padding(.top, 20)
                 }
 
-                Button(action: {}) {
+                Button(action: saveTask) {
                     Text("Add Project")
                         .font(.system(size: 18, weight: .semibold))
                         .foregroundColor(.white)
@@ -73,8 +124,99 @@ struct AddTaskView: View {
                 hideKeyboard()
             }
         )
+        // Success alert for saveTask
+        .alert("Success", isPresented: $showSuccessAlert) {
+            Button("OK") {
+                clearForm()
+                dismiss()  // Close the sheet
+            }
+        } message: {
+            Text("Task added successfully!")
+        }
+        // Generic error alert for saveTask
+        .alert("Error", isPresented: $showErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.errorMessage ?? "Failed to add task")
+        }
+        // AI-specific error alert
+        .alert("AI Error", isPresented: $showAIErrorAlert) {
+            Button("OK", role: .cancel) { }
+        } message: {
+            Text(viewModel.aiErrorMessage ?? "Failed to generate task with AI")
+        }
+        .onAppear {
+            // Ensure viewModel has context (you already do this)
+            if viewModel.tasks.isEmpty {
+                viewModel.setModelContext(modelContext)
+            }
+        }
+    }
+
+    // MARK: - Actions
+
+    /// Save the currently filled task fields to SwiftData (calls viewModel.addTask)
+    private func saveTask() {
+        hideKeyboard()
+
+        let success = viewModel.addTask(
+            taskGroup: taskGroup,
+            projectName: projectName,
+            description: description,
+            startDate: startDate,
+            endDate: endDate
+        )
+
+        if success {
+            // Small delay to ensure SwiftData saves
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                showSuccessAlert = true
+            }
+        } else {
+            showErrorAlert = true
+        }
+    }
+
+    /// Clear all form fields to defaults
+    private func clearForm() {
+        aiInput = ""
+        projectName = ""
+        description = ""
+        taskGroup = "Work"
+        startDate = Date()
+        endDate = Date()
+    }
+
+    /// Calls the ViewModel to generate a task from the AI input.
+    /// On success: the new task is already saved to SwiftData (we inserted in ViewModel)
+    /// Also autofill UI fields so the user can edit before saving (optional behavior).
+    private func generateWithAI() {
+        hideKeyboard()
+//        Task {
+//            // If viewModel.generateTaskFromAI returns true, refresh UI.
+//            let success = await viewModel.generateTaskFromAI(input: aiInput)
+//            if success {
+//                // Grab the latest task that was inserted (most recent createdAt)
+//                if let newTask = viewModel.tasks.first {
+//                    // Autofill the form with values from the generated task so user can adjust
+//                    taskGroup = newTask.taskGroup
+//                    projectName = newTask.projectName
+//                    description = newTask.taskDescription
+//                    startDate = newTask.startDate
+//                    endDate = newTask.endDate
+//
+//                    // Show success feedback (but do not dismiss automatically, let user review)
+//                    showSuccessAlert = true
+//                }
+//            } else {
+//                // Show AI error
+//                showAIErrorAlert = true
+//            }
+//        }
     }
 }
+
+// MARK: - Helpers + Subviews (unchanged from your original file)
 
 extension View {
     func hideKeyboard() {
@@ -92,35 +234,36 @@ private struct Background: View {
 }
 
 private struct Header: View {
+    @Environment(\.dismiss) private var dismiss
+
     var body: some View {
         GeometryReader { geo in
             let totalWidth = geo.size.width
             HStack(spacing: 0) {
-                
-                // Back Arrow
-                HStack {
-                    Image("ic_arrow")
-                        .resizable()
-                        .scaledToFill()
-                        .frame(width: 28, height: 12)
+
+                Button(action: {
+                    dismiss()
+                }) {
+                    Image(systemName: "xmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.black)
+                        .frame(width: 28, height: 28)
                 }
                 .frame(width: totalWidth * 0.33, alignment: .leading)
-                
-                // Title
+
                 HStack {
                     Text("Add Task")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.primary)
                 }
                 .frame(width: totalWidth * 0.33, alignment: .center)
-                
-                // Bell Icon
+
                 Button(action: {}) {
                     ZStack(alignment: .topTrailing) {
                         Image(systemName: "bell")
                             .font(.system(size: 22))
                             .foregroundColor(.black)
-                        
+
                         Circle()
                             .fill(Color.appPrimary)
                             .frame(width: 8, height: 8)
@@ -139,34 +282,34 @@ private struct TaskGroupDropdown: View {
     @Binding var selectedGroup: String
     @Binding var isExpanded: Bool
     let items: [String]
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            
+
             HStack {
                 Text("Task Group")
                     .font(.system(size: 13))
                     .foregroundColor(.secondary)
-                
+
                 Spacer()
-                
+
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.system(size: 18))
                     .foregroundColor(.black)
+                    .frame(alignment: .center)
             }
-            
+
             HStack {
                 Text(selectedGroup)
                     .font(.system(size: 18, weight: .semibold))
-                
+
                 Spacer()
             }
             .padding(.top, 4)
             .onTapGesture {
                 withAnimation(.spring()) { isExpanded.toggle() }
             }
-            
-            // Dropdown
+
             if isExpanded {
                 VStack(alignment: .leading, spacing: 12) {
                     ForEach(items, id: \.self) { group in
@@ -189,16 +332,15 @@ private struct TaskGroupDropdown: View {
     }
 }
 
-
 private struct ProjectNameField: View {
     @Binding var projectName: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Project Name")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
-            
+
             TextField("Enter project name...", text: $projectName)
                 .font(.system(size: 18, weight: .semibold))
                 .foregroundColor(.primary)
@@ -210,16 +352,15 @@ private struct ProjectNameField: View {
     }
 }
 
-
 private struct DescriptionInputField: View {
     @Binding var description: String
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
             Text("Description")
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
-            
+
             TextEditor(text: $description)
                 .frame(height: 120)
                 .font(.system(size: 16))
@@ -232,30 +373,29 @@ private struct DescriptionInputField: View {
     }
 }
 
-
 private struct DatePickerCard: View {
     let title: String
     @Binding var date: Date
     @Binding var isOpen: Bool
-    
+
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            
+
             Text(title)
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
-            
+
             HStack {
                 Text(formattedDate(date))
                     .font(.system(size: 18, weight: .semibold))
-                
+
                 Spacer()
-                
+
                 Image(systemName: "calendar")
                     .font(.system(size: 22))
             }
             .onTapGesture { withAnimation { isOpen.toggle() } }
-            
+
             if isOpen {
                 DatePicker("", selection: $date, displayedComponents: .date)
                     .datePickerStyle(.wheel)
@@ -267,7 +407,7 @@ private struct DatePickerCard: View {
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
     }
-    
+
     private func formattedDate(_ date: Date) -> String {
         let f = DateFormatter()
         f.dateFormat = "dd MMM, yyyy"
