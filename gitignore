@@ -1,0 +1,58 @@
+# OS generated files #
+######################
+.DS_Store?
+ehthumbs.db
+Thumbs.db
+*.DS_Store
+
+# Xcode
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+*.xcuserstate
+project.xcworkspace/
+xcuserdata/
+FlowFocusMini/FlowFocusMini/Resources/API/Config.swift
+
+# Eclipse
+.classpath
+.project
+.settings
+
+# Generated files
+/web-app/WEB-INF
+build/
+*.o
+*.pyc
+target
+test-reports/
+
+# Other source repository archive directories (protects when importing)
+.hg
+.svn
+CVS
+
+# automatic backup files
+*~.nib
+*.swp
+*~
+*(Autosaved).rtfd/
+Backup[ ]of[ ]*.pages/
+Backup[ ]of[ ]*.key/
+Backup[ ]of[ ]*.numbers/
+
+# Code coverage
+env.sh
+
+# Dependency manager
+Carthage
+
+# Localization
+Localization
+
+# VSCode
+settings.json
+
+# IntelliJ
+.idea/*
