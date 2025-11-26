@@ -1,5 +1,5 @@
 //
-//  Task.swift
+//  TodoTask.swift
 //  FlowFocusMini
 //
 //  Created by o9tech on 21/11/2025.
@@ -9,7 +9,7 @@ import Foundation
 import SwiftData
 
 @Model
-final class Task {
+final class TodoTask {
     var id: UUID
     var taskGroup: String
     var projectName: String
@@ -39,6 +39,8 @@ final class Task {
         self.createdAt = createdAt
     }
     
+    // MARK: - Computed Properties
+    
     // Computed property to calculate progress percentage
     var progressPercentage: Double {
         let total = endDate.timeIntervalSince(startDate)
@@ -55,5 +57,43 @@ final class Task {
     // Check if task is in progress
     var isInProgress: Bool {
         return !isCompleted && Date() >= startDate && Date() <= endDate
+    }
+    
+    // MARK: - Update Methods
+    
+    /// Mark task as completed
+    func markAsCompleted() {
+        self.isCompleted = true
+    }
+    
+    /// Mark task as incomplete
+    func markAsIncomplete() {
+        self.isCompleted = false
+    }
+    
+    /// Toggle completion status
+    func toggleCompletion() {
+        self.isCompleted.toggle()
+    }
+    
+    /// Update task group
+    func updateGroup(_ group: String) {
+        self.taskGroup = group
+    }
+    
+    /// Update project name
+    func updateProjectName(_ name: String) {
+        self.projectName = name
+    }
+    
+    /// Update description
+    func updateDescription(_ desc: String) {
+        self.taskDescription = desc
+    }
+    
+    /// Update dates
+    func updateDates(start: Date, end: Date) {
+        self.startDate = start
+        self.endDate = end
     }
 }

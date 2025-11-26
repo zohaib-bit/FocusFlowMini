@@ -3,7 +3,7 @@ import SwiftData
 
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var viewModel = TaskViewModel(openAIKey: "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")
+    @StateObject private var viewModel = TaskViewModel(apiKey: Config.openaiAPIKey)
     
     @State private var selectedTab = 0
     @State private var showAddTask = false
@@ -28,6 +28,7 @@ struct RootView: View {
 
                     }
                 
+
                 DocumentView()
                     .tag(1)
                     .tabItem {
@@ -65,7 +66,7 @@ struct RootView: View {
         }
         .environmentObject(viewModel)  // ← CRITICAL: This injects ViewModel
         .sheet(isPresented: $showAddTask) {
-            AddTaskView()
+            Client_Interest()
                 .environmentObject(viewModel)  // ← CRITICAL: Re-inject for sheet
         }
         .onAppear {
@@ -76,5 +77,5 @@ struct RootView: View {
 
 #Preview {
     RootView()
-        .modelContainer(for: Task.self)
+        .modelContainer(for: TodoTask.self)
 }

@@ -1,15 +1,6 @@
-
-//
-// AIService.swift
-// FlowFocusMini
-//
-// Created by o9tech on 21/11/2025.
-//
-
 import Foundation
 
 /// Model that matches the JSON we ask the AI to return.
-/// You can move this to a separate file if you prefer.
 struct ParsedTaskResponse: Codable {
     let task_group: String
     let project_name: String
@@ -30,10 +21,7 @@ private struct OpenAIResponse: Codable {
 }
 
 /// Responsible for calling the OpenAI API and returning a ParsedTaskResponse.
-///
-/// NOTE: For production do NOT hardcode the API key. See notes at the end of this message.
 final class AIService {
-    // Replace with safe retrieval (Keychain / environment / Secrets file excluded from repo)
     private let apiKey: String
 
     /// Initialize with the API key so we don't hardcode inside the class.
@@ -47,9 +35,18 @@ final class AIService {
         // OpenAI chat completions endpoint
         let url = URL(string: "https://api.openai.com/v1/chat/completions")!
 
+        // Get current date and time for context
+        let now = Date()
+        let formatter = ISO8601DateFormatter()
+        let currentDateTime = formatter.string(from: now)
+        let tomorrow = Calendar.current.date(byAdding: .day, value: 1, to: now)!
+        let tomorrowString = formatter.string(from: tomorrow)
+
         // System prompt instructs the model to return only JSON with exact keys.
         let systemPrompt = """
-        You are a task parser. Convert the user's input into ONLY valid JSON matching this schema:
+        You are a task parser. Today's date is \(currentDateTime).
+        
+        Convert the user's input into ONLY valid JSON matching this schema:
         {
             "task_group": "Work" | "Personal" | "Health" | "Finance" | "Other",
             "project_name": "short project name (1-3 words)",
@@ -58,11 +55,17 @@ final class AIService {
             "end_date": "ISO8601 datetime"
         }
 
-        Rules:
-        - If no date is provided, set start_date = now ISO8601 and end_date = now + 2 hours.
-        - If only one date/time is provided, treat as start_date and set end_date = start_date + 2 hours.
-        - Use timezone information if user provided it; otherwise use UTC (or local timezone as ISO shows).
-        - Output ONLY valid JSON (no explanatory text).
+        IMPORTANT DATE RULES:
+        - Today is: \(currentDateTime)
+        - Tomorrow is: \(tomorrowString)
+        - Parse relative dates like "tomorrow", "today", "next week", "in 2 days", etc.
+        - If user says "tomorrow at 2pm", use tomorrow's date at 14:00:00Z
+        - If user says "today at 5pm", use today's date at 17:00:00Z
+        - If no time is specified, assume 09:00:00Z (9 AM)
+        - If no date is provided, set start_date = today at 09:00:00Z and end_date = today + 2 hours
+        - If only one date/time is provided, treat as start_date and set end_date = start_date + 2 hours
+        - Always return dates in ISO8601 format with Z timezone (UTC)
+        - Output ONLY valid JSON (no explanatory text, no markdown, no code blocks)
         """
 
         let body: [String: Any] = [
@@ -71,7 +74,6 @@ final class AIService {
                 ["role": "system", "content": systemPrompt],
                 ["role": "user", "content": text]
             ],
-            // You can tune temperature; lower = more deterministic
             "temperature": 0.0,
             "max_tokens": 400
         ]
@@ -144,5 +146,3 @@ final class AIService {
         }
     }
 }
-
-

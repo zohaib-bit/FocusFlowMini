@@ -9,28 +9,25 @@ import SwiftUI
 import SwiftData
 
 struct CalenderView: View {
-    @Query(sort: \Task.createdAt, order: .reverse) private var tasks: [Task]
+    @Query(sort: \TodoTask.createdAt, order: .reverse) private var tasks: [TodoTask]
     
     @State private var selectedDate: Date = {
-         let calendar = Calendar.current
-         return calendar.startOfDay(for: Date())
-     }()
+        let calendar = Calendar.current
+        return calendar.startOfDay(for: Date())
+    }()
     
     @State private var selectedTab = 0
     
     // Filter tasks by selected date
-    // Shows tasks where the selected date falls between startDate and endDate
-    var tasksForSelectedDate: [Task] {
+    var tasksForSelectedDate: [TodoTask] {
         let calendar = Calendar.current
         let startOfDay = calendar.startOfDay(for: selectedDate)
         let endOfDay = calendar.date(byAdding: .day, value: 1, to: startOfDay) ?? selectedDate
         
-        return tasks.compactMap { task -> Task? in
-            // Check if selected date falls within task's date range
+        return tasks.compactMap { task -> TodoTask? in
             let taskStartDay = calendar.startOfDay(for: task.startDate)
             let taskEndDay = calendar.startOfDay(for: task.endDate)
             
-            // Task is included if selected date is on or between start and end dates
             if startOfDay >= taskStartDay && startOfDay <= taskEndDay {
                 return task
             }
@@ -38,27 +35,16 @@ struct CalenderView: View {
         }
     }
     
-    // Filter tasks based on selected tab
-    var filteredTasks: [Task] {
+    // Tab filtered
+    var filteredTasks: [TodoTask] {
         let dateTasks = tasksForSelectedDate
         
         switch selectedTab {
-        case 0: // All
-            return dateTasks
-        case 1: // To do
-            return dateTasks.compactMap { task -> Task? in
-                (!task.isInProgress && !task.isCompleted) ? task : nil
-            }
-        case 2: // In Progress
-            return dateTasks.compactMap { task -> Task? in
-                task.isInProgress ? task : nil
-            }
-        case 3: // Completed
-            return dateTasks.compactMap { task -> Task? in
-                task.isCompleted ? task : nil
-            }
-        default:
-            return dateTasks
+        case 0: return dateTasks
+        case 1: return dateTasks.filter { !$0.isInProgress && !$0.isCompleted }
+        case 2: return dateTasks.filter { $0.isInProgress }
+        case 3: return dateTasks.filter { $0.isCompleted }
+        default: return dateTasks
         }
     }
     
@@ -80,11 +66,10 @@ struct CalenderView: View {
                         TaskFilterTabs(selectedTab: $selectedTab)
                             .padding(.top, 30)
                         
-                        // Task List Section
                         TaskListSection(tasks: filteredTasks, selectedDate: selectedDate)
                             .padding(.horizontal, 20)
                             .padding(.top, 24)
-                            .padding(.bottom, 120) // Space for bottom nav
+                            .padding(.bottom, 120)
                     }
                 }
                 .padding(.top, 110)
@@ -279,9 +264,8 @@ private struct TaskFilterTabs: View {
     }
 }
 
-// New Section: Task List Display
 private struct TaskListSection: View {
-    let tasks: [Task]
+    let tasks: [TodoTask]
     let selectedDate: Date
     
     private var dateString: String {
@@ -292,7 +276,6 @@ private struct TaskListSection: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Section Header
             HStack {
                 VStack(alignment: .leading, spacing: 4) {
                     Text("Tasks")
@@ -317,7 +300,6 @@ private struct TaskListSection: View {
                 }
             }
             
-            // Task List
             if tasks.isEmpty {
                 EmptyTaskState()
             } else {
@@ -332,7 +314,7 @@ private struct TaskListSection: View {
 }
 
 private struct CalendarTaskCard: View {
-    let task: Task
+    let task: TodoTask
     
     var cardColor: Color {
         switch task.taskGroup {
@@ -391,7 +373,6 @@ private struct CalendarTaskCard: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // Icon
             ZStack {
                 Circle()
                     .fill(iconColor.opacity(0.15))
@@ -402,7 +383,6 @@ private struct CalendarTaskCard: View {
                     .foregroundColor(iconColor)
             }
             
-            // Task Info
             VStack(alignment: .leading, spacing: 6) {
                 Text(task.projectName)
                     .font(.system(size: 16, weight: .semibold))
@@ -426,7 +406,6 @@ private struct CalendarTaskCard: View {
             
             Spacer()
             
-            // Progress
             if !task.isCompleted {
                 VStack(spacing: 4) {
                     Text("\(Int(task.progressPercentage))%")
@@ -475,5 +454,5 @@ private struct EmptyTaskState: View {
 
 #Preview {
     CalenderView()
-        .modelContainer(for: Task.self, inMemory: true)
+        .modelContainer(for: TodoTask.self, inMemory: true)
 }

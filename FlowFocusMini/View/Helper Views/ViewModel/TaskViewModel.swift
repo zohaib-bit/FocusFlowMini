@@ -1,46 +1,79 @@
 //
-// TaskViewModel.swift
-// FlowFocusMini
+//  TaskViewModel.swift
+//  FlowFocusMini
 //
-// Created by o9tech on 21/11/2025.
+//  Created by o9tech on 21/11/2025.
 //
 
 import Foundation
 import SwiftData
 import SwiftUI
 
-/// Primary ViewModel for tasks. Observable so SwiftUI updates UI when changes occur.
-/// Added AI support: use `generateTaskFromAI(input:)` to parse natural language and save a Task.
 final class TaskViewModel: ObservableObject {
-    @Published var tasks: [Task] = []
+    @Published var tasks: [TodoTask] = []
     @Published var errorMessage: String?
-
-    // Optional AI error / status fields for UI
-    @Published var isGeneratingWithAI: Bool = false
     @Published var aiErrorMessage: String?
-
+    @Published var isGeneratingWithAI: Bool = false
+    @Published var username: String = "User"
+    @Published var email: String = "user@example.com"
+    
     private var modelContext: ModelContext?
     private let aiService: AIService
-
-    // Initialize with an API key passed from app / environment.
-    init(modelContext: ModelContext? = nil, openAIKey: String) {
+    
+    init(modelContext: ModelContext? = nil, apiKey: String) {
         self.modelContext = modelContext
-        self.aiService = AIService(apiKey: "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")
-
+        self.aiService = AIService(apiKey: apiKey)
+        self.loadUserData()
         if modelContext != nil {
             fetchTasks()
         }
     }
-
-    // Set or update model context (useful for dependency injection in previews/test)
+    
+    // Set model context (useful for dependency injection)
     func setModelContext(_ context: ModelContext) {
         self.modelContext = context
         fetchTasks()
     }
-
-    // MARK: - CRUD Operations (unchanged behaviour; comments added)
-
-    /// Add new Task to SwiftData store synchronously from UI input
+    
+    // MARK: - User Data
+    
+    /// Load user data from UserDefaults
+    func loadUserData() {
+        if let savedUsername = UserDefaults.standard.string(forKey: "username") {
+            self.username = savedUsername
+        }
+        if let savedEmail = UserDefaults.standard.string(forKey: "email") {
+            self.email = savedEmail
+        }
+    }
+    
+    /// Save user data to UserDefaults (call this after user logs in)
+    func saveUserData(username: String, email: String) {
+        UserDefaults.standard.set(username, forKey: "username")
+        UserDefaults.standard.set(email, forKey: "email")
+        DispatchQueue.main.async {
+            self.username = username
+            self.email = email
+        }
+    }
+    
+    /// Set user data directly (useful for real-time updates)
+    func setUserData(username: String, email: String) {
+        self.username = username
+        self.email = email
+        saveUserData(username: username, email: email)
+    }
+    
+    /// Clear user data on logout
+    func clearUserData() {
+        UserDefaults.standard.removeObject(forKey: "username")
+        UserDefaults.standard.removeObject(forKey: "email")
+        self.username = "User"
+        self.email = "user@example.com"
+    }
+    
+    // MARK: - CRUD Operations
+    
     func addTask(
         taskGroup: String,
         projectName: String,
@@ -52,30 +85,28 @@ final class TaskViewModel: ObservableObject {
             errorMessage = "Model context not available"
             return false
         }
-
-        // Validation checks
+        
+        // Validation
         guard !projectName.trimmingCharacters(in: .whitespaces).isEmpty else {
             errorMessage = "Project name is required"
             return false
         }
-
+        
         guard startDate <= endDate else {
             errorMessage = "End date must be after start date"
             return false
         }
-
-        // Create Task (SwiftData @Model object)
-        let task = Task(
+        
+        let task = TodoTask(
             taskGroup: taskGroup,
             projectName: projectName,
             taskDescription: description,
             startDate: startDate,
             endDate: endDate
         )
-
-        // Insert and save
+        
         context.insert(task)
-
+        
         do {
             try context.save()
             fetchTasks()
@@ -87,21 +118,28 @@ final class TaskViewModel: ObservableObject {
             return false
         }
     }
-
-    func updateTask(_ task: Task) {
-        guard let context = modelContext else { return }
+    
+    func updateTask(_ task: TodoTask) {
+        guard let context = modelContext else {
+            errorMessage = "Model context not available"
+            return
+        }
+        
         do {
             try context.save()
             fetchTasks()
             errorMessage = nil
+            objectWillChange.send()
         } catch {
             errorMessage = "Failed to update task: \(error.localizedDescription)"
         }
     }
-
-    func deleteTask(_ task: Task) {
+    
+    func deleteTask(_ task: TodoTask) {
         guard let context = modelContext else { return }
+        
         context.delete(task)
+        
         do {
             try context.save()
             fetchTasks()
@@ -110,20 +148,76 @@ final class TaskViewModel: ObservableObject {
             errorMessage = "Failed to delete task: \(error.localizedDescription)"
         }
     }
-
-    func toggleTaskCompletion(_ task: Task) {
+    
+    func toggleTaskCompletion(_ task: TodoTask) {
         task.isCompleted.toggle()
         updateTask(task)
     }
-
+    
+    // MARK: - AI Task Generation
+    
+    /// Parse user input with AI and create a task automatically
+    func generateTaskFromAI(input: String) async -> Bool {
+        guard let context = modelContext else {
+            aiErrorMessage = "Model context not available"
+            return false
+        }
+        
+        DispatchQueue.main.async {
+            self.isGeneratingWithAI = true
+            self.aiErrorMessage = nil
+        }
+        
+        do {
+            // Call OpenAI to parse the task
+            let parsedTask = try await aiService.parseTask(from: input)
+            
+            // Convert ISO8601 strings to Date
+            guard let startDate = ISO8601DateFormatter().date(from: parsedTask.start_date),
+                  let endDate = ISO8601DateFormatter().date(from: parsedTask.end_date) else {
+                throw NSError(domain: "TaskViewModel", code: 0, userInfo: [NSLocalizedDescriptionKey: "Failed to parse dates"])
+            }
+            
+            // Create and save the task
+            let task = TodoTask(
+                taskGroup: parsedTask.task_group,
+                projectName: parsedTask.project_name,
+                taskDescription: parsedTask.description,
+                startDate: startDate,
+                endDate: endDate
+            )
+            
+            context.insert(task)
+            
+            try context.save()
+            
+            // Update UI on main thread
+            DispatchQueue.main.async {
+                self.fetchTasks()
+                self.isGeneratingWithAI = false
+                self.aiErrorMessage = nil
+            }
+            
+            return true
+            
+        } catch {
+            DispatchQueue.main.async {
+                self.isGeneratingWithAI = false
+                self.aiErrorMessage = error.localizedDescription
+            }
+            return false
+        }
+    }
+    
     // MARK: - Fetch Operations
-
+    
     func fetchTasks() {
         guard let context = modelContext else { return }
-
-        let descriptor = FetchDescriptor<Task>(
+        
+        let descriptor = FetchDescriptor<TodoTask>(
             sortBy: [SortDescriptor(\.createdAt, order: .reverse)]
         )
+        
         do {
             tasks = try context.fetch(descriptor)
             errorMessage = nil
@@ -132,88 +226,41 @@ final class TaskViewModel: ObservableObject {
             tasks = []
         }
     }
-
-    // MARK: - Filters & Stats (unchanged)
-    var inProgressTasks: [Task] {
+    
+    // MARK: - Filtered Queries
+    
+    var inProgressTasks: [TodoTask] {
         tasks.filter { $0.isInProgress }
     }
-
-    var completedTasks: [Task] {
+    
+    var completedTasks: [TodoTask] {
         tasks.filter { $0.isCompleted }
     }
-
-    var overdueTasks: [Task] {
+    
+    var overdueTasks: [TodoTask] {
         tasks.filter { $0.isOverdue }
     }
-
-    func tasksByGroup(_ group: String) -> [Task] {
+    
+    func tasksByGroup(_ group: String) -> [TodoTask] {
         tasks.filter { $0.taskGroup == group }
     }
-
-    var totalTasks: Int { tasks.count }
-    var completedTasksCount: Int { completedTasks.count }
-    var inProgressTasksCount: Int { inProgressTasks.count }
+    
+    // MARK: - Statistics
+    
+    var totalTasks: Int {
+        tasks.count
+    }
+    
+    var completedTasksCount: Int {
+        completedTasks.count
+    }
+    
+    var inProgressTasksCount: Int {
+        inProgressTasks.count
+    }
+    
     var completionRate: Double {
         guard totalTasks > 0 else { return 0 }
         return Double(completedTasksCount) / Double(totalTasks) * 100
-    }
-
-    // MARK: - AI Integration
-
-    /// Generate a Task from natural language `input` using the AIService and insert into SwiftData.
-    /// Returns true on success, false on failure. Updates `aiErrorMessage` for display.
-    @MainActor
-    func generateTaskFromAI(input: String) async -> Bool {
-        guard let context = modelContext else {
-            aiErrorMessage = "Model context not available"
-            return false
-        }
-
-        isGeneratingWithAI = true
-        aiErrorMessage = nil
-
-        do {
-            // Call AI service
-            let parsed = try await aiService.parseTask(from: input)
-
-            // Convert ISO8601 -> Date (try to parse; fallback to now or now+2h)
-            let iso = ISO8601DateFormatter()
-            iso.formatOptions = [.withInternetDateTime, .withFractionalSeconds]
-            var start = iso.date(from: parsed.start_date)
-            if start == nil {
-                // try without fractional seconds
-                iso.formatOptions = [.withInternetDateTime]
-                start = iso.date(from: parsed.start_date)
-            }
-            let end = iso.date(from: parsed.end_date) ?? start?.addingTimeInterval(7200) ?? Date().addingTimeInterval(7200)
-            let startDate = start ?? Date()
-
-            // Validate or sanitize strings
-            let tg = parsed.task_group.isEmpty ? "Work" : parsed.task_group
-            let pn = parsed.project_name.isEmpty ? "General" : parsed.project_name
-            let desc = parsed.description
-
-            // Create Task and save
-            let task = Task(
-                taskGroup: tg,
-                projectName: pn,
-                taskDescription: desc,
-                startDate: startDate,
-                endDate: end
-            )
-
-            context.insert(task)
-            try context.save()
-
-            // Refresh tasks list and UI
-            fetchTasks()
-            isGeneratingWithAI = false
-            aiErrorMessage = nil
-            return true
-        } catch {
-            aiErrorMessage = "AI error: \(error.localizedDescription)"
-            isGeneratingWithAI = false
-            return false
-        }
     }
 }

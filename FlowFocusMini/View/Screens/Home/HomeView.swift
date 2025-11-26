@@ -9,10 +9,11 @@ import SwiftUI
 import SwiftData
 
 struct HomeView: View {
-    @Query(sort: \Task.createdAt, order: .reverse) private var allTasks: [Task]
+    @EnvironmentObject private var authVM: AuthViewModel
+    @Query(sort: \TodoTask.createdAt, order: .reverse) private var allTasks: [TodoTask]
     
     // Computed properties for real-time filtering
-    var inProgressTasks: [Task] {
+    var inProgressTasks: [TodoTask] {
         allTasks.filter { $0.isInProgress }
     }
     
@@ -24,7 +25,7 @@ struct HomeView: View {
         allTasks.count
     }
     
-    func tasksByGroup(_ group: String) -> [Task] {
+    func tasksByGroup(_ group: String) -> [TodoTask] {
         allTasks.filter { $0.taskGroup == group }
     }
     
@@ -40,7 +41,7 @@ struct HomeView: View {
                     ScrollView(showsIndicators: false) {
                         VStack(spacing: 0) {
                             
-                            Header()
+                            Header(username: authVM.userDisplayName)
                                 .padding(.horizontal, 20)
                             
                             TodaysTaskCard(
@@ -80,7 +81,7 @@ private struct Background: View {
 }
 
 private struct Header: View {
-    var username: String = "Livia Vaccaro"
+    var username: String
     
     var body: some View {
         GeometryReader { geo in
@@ -223,7 +224,7 @@ struct TodaysTaskCard: View {
 }
 
 struct InProgressSection: View {
-    let tasks: [Task]
+    let tasks: [TodoTask]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
@@ -259,7 +260,7 @@ struct InProgressSection: View {
 }
 
 struct TaskCard: View {
-    let task: Task
+    let task: TodoTask
     
     var cardColor: Color {
         switch task.taskGroup {
@@ -352,8 +353,8 @@ struct TaskCard: View {
 }
 
 struct TaskGroupsSection: View {
-    let allTasks: [Task]
-    let tasksByGroup: (String) -> [Task]
+    let allTasks: [TodoTask]
+    let tasksByGroup: (String) -> [TodoTask]
     let groups = ["Work", "Personal", "Health", "Finance"]
     
     var body: some View {
@@ -388,7 +389,7 @@ struct TaskGroupsSection: View {
 
 struct TaskGroupCard: View {
     let title: String
-    let tasks: [Task]
+    let tasks: [TodoTask]
     
     var taskCount: Int {
         tasks.count
@@ -499,5 +500,6 @@ struct EmptyStateCard: View {
 
 #Preview {
     HomeView()
-        .modelContainer(for: Task.self, inMemory: true)
+        .modelContainer(for: TodoTask.self, inMemory: true)
+        .environmentObject(AuthViewModel())
 }
