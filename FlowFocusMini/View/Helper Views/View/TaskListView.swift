@@ -6,9 +6,11 @@
 //
 
 import SwiftUI
+import SwiftData
 
 struct TaskListView: View {
     @EnvironmentObject private var viewModel: TaskViewModel
+    @Environment(\.modelContext) private var modelContext
     @State private var selectedFilter: TaskFilter = .all
     
     enum TaskFilter: String, CaseIterable {
@@ -18,7 +20,7 @@ struct TaskListView: View {
         case overdue = "Overdue"
     }
     
-    var filteredTasks: [Task] {
+    var filteredTasks: [TodoTask] {
         switch selectedFilter {
         case .all:
             return viewModel.tasks
@@ -54,7 +56,7 @@ struct TaskListView: View {
                     ScrollView(showsIndicators: false) {
                         LazyVStack(spacing: 12) {
                             ForEach(filteredTasks) { task in
-                                TaskRowCard(task: task, viewModel: viewModel)
+//                                TaskRowCard(task: task, viewModel: viewModel)
                             }
                         }
                         .padding(.horizontal, 20)
@@ -134,129 +136,206 @@ private struct FilterPill: View {
     }
 }
 
-private struct TaskRowCard: View {
-    let task: Task
-    let viewModel: TaskViewModel
-    @State private var showDeleteAlert = false
-    
-    var body: some View {
-        HStack(spacing: 12) {
-            // Checkbox
-            Button(action: {
-                viewModel.toggleTaskCompletion(task)
-            }) {
-                ZStack {
-                    RoundedRectangle(cornerRadius: 8)
-                        .stroke(task.isCompleted ? Color.green : Color.gray.opacity(0.3), lineWidth: 2)
-                        .frame(width: 24, height: 24)
-                    
-                    if task.isCompleted {
-                        Image(systemName: "checkmark")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundColor(.green)
-                    }
-                }
-            }
-            
-            // Task Info
-            VStack(alignment: .leading, spacing: 8) {
-                // Project Name
-                Text(task.projectName)
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.primary)
-                    .strikethrough(task.isCompleted)
-                
-                // Task Group Badge
-                HStack(spacing: 8) {
-                    Text(task.taskGroup)
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundColor(.white)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 4)
-                        .background(groupColor(task.taskGroup))
-                        .cornerRadius(6)
-                    
-                    if task.isOverdue {
-                        Text("Overdue")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 10)
-                            .padding(.vertical, 4)
-                            .background(Color.red)
-                            .cornerRadius(6)
-                    }
-                }
-                
-                // Progress Bar (only for non-completed tasks)
-                if !task.isCompleted && task.isInProgress {
-                    GeometryReader { geometry in
-                        ZStack(alignment: .leading) {
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(Color.gray.opacity(0.2))
-                                .frame(height: 6)
-                            
-                            RoundedRectangle(cornerRadius: 3)
-                                .fill(Color.appPrimary)
-                                .frame(
-                                    width: geometry.size.width * CGFloat(task.progressPercentage / 100),
-                                    height: 6
-                                )
-                        }
-                    }
-                    .frame(height: 6)
-                    
-                    Text("\(Int(task.progressPercentage))% complete")
-                        .font(.system(size: 11))
-                        .foregroundColor(.secondary)
-                }
-                
-                // Date
-                Text(formattedDateRange(task))
-                    .font(.system(size: 12))
-                    .foregroundColor(.secondary)
-            }
-            
-            Spacer()
-            
-            // Delete Button
-            Button(action: {
-                showDeleteAlert = true
-            }) {
-                Image(systemName: "trash")
-                    .font(.system(size: 18))
-                    .foregroundColor(.red)
-            }
-        }
-        .padding(16)
-        .background(Color.white)
-        .cornerRadius(16)
-        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
-        .alert("Delete Task", isPresented: $showDeleteAlert) {
-            Button("Cancel", role: .cancel) { }
-            Button("Delete", role: .destructive) {
-                viewModel.deleteTask(task)
-            }
-        } message: {
-            Text("Are you sure you want to delete '\(task.projectName)'?")
-        }
-    }
-    
-    private func groupColor(_ group: String) -> Color {
-        switch group {
-        case "Work": return .blue
-        case "Personal": return .purple
-        case "Health": return .green
-        case "Finance": return .orange
-        default: return .gray
-        }
-    }
-    
-    private func formattedDateRange(_ task: Task) -> String {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM dd, yyyy"
-        return "\(formatter.string(from: task.startDate)) - \(formatter.string(from: task.endDate))"
-    }
-}
+//private struct TaskRowCard: View {
+//    let task: TodoTask
+//    let viewModel: TaskViewModel
+//    @Environment(\.modelContext) private var modelContext
+//    @State private var showDeleteAlert = false
+//    
+//    var body: some View {
+//        HStack(spacing: 12) {
+//            // Checkbox - Make it a proper button
+//            Button(action: {
+//                task.isCompleted.toggle()
+//                viewModel.updateTask(task)
+//            }) {
+//                ZStack {
+//                    RoundedRectangle(cornerRadius: 8)
+//                        .stroke(task.isCompleted ? Color.green : Color.gray.opacity(0.3), lineWidth: 2)
+//                        .frame(width: 24, height: 24)
+//                        .background(task.isCompleted ? Color.green.opacity(0.1) : Color.clear)
+//                    
+//                    if task.isCompleted {
+//                        Image(systemName: "checkmark")
+//                            .font(.system(size: 14, weight: .bold))
+//                            .foregroundColor(.green)
+//                    }
+//                }
+//            }
+//            .frame(width: 40, height: 40)
+//            .buttonStyle(PlainButtonStyle())
+//            
+//            // Task Info
+//            VStack(alignment: .leading, spacing: 8) {
+//                // Project Name
+//                Text(task.projectName)
+//                    .font(.system(size: 16, weight: .semibold))
+//                    .foregroundColor(.primary)
+//                    .strikethrough(task.isCompleted)
+//                
+//                // Task Group Badge + Status Dropdown
+//                HStack(spacing: 8) {
+//                    Text(task.taskGroup)
+//                        .font(.system(size: 11, weight: .medium))
+//                        .foregroundColor(.white)
+//                        .padding(.horizontal, 10)
+//                        .padding(.vertical, 4)
+//                        .background(groupColor(task.taskGroup))
+//                        .cornerRadius(6)
+//                    
+//                    // Status Dropdown Menu
+//                    Menu {
+//                        Button(action: {
+//                            task.isCompleted = false
+//                            viewModel.updateTask(task)
+//                        }) {
+//                            HStack {
+//                                Image(systemName: "circle")
+//                                Text("Pending")
+//                            }
+//                        }
+//                        
+//                        Button(action: {
+//                            task.isCompleted = false
+//                            viewModel.updateTask(task)
+//                        }) {
+//                            HStack {
+//                                Image(systemName: "play.circle.fill")
+//                                Text("In Progress")
+//                            }
+//                        }
+//                        
+//                        Button(action: {
+//                            task.isCompleted = true
+//                            viewModel.updateTask(task)
+//                        }) {
+//                            HStack {
+//                                Image(systemName: "checkmark.circle.fill")
+//                                Text("Completed")
+//                            }
+//                        }
+//                    } label: {
+//                        HStack(spacing: 4) {
+//                            Image(systemName: getStatusIcon(task))
+//                            Text(getStatusText(task))
+//                                .font(.system(size: 11, weight: .medium))
+//                        }
+//                        .foregroundColor(.white)
+//                        .padding(.horizontal, 10)
+//                        .padding(.vertical, 4)
+//                        .background(getStatusColor(task))
+//                        .cornerRadius(6)
+//                    }
+//                }
+//                
+//                // Progress Bar (only for in-progress tasks)
+//                if !task.isCompleted && task.isInProgress {
+//                    GeometryReader { geometry in
+//                        ZStack(alignment: .leading) {
+//                            RoundedRectangle(cornerRadius: 3)
+//                                .fill(Color.gray.opacity(0.2))
+//                                .frame(height: 6)
+//                            
+//                            RoundedRectangle(cornerRadius: 3)
+//                                .fill(Color.appPrimary)
+//                                .frame(
+//                                    width: geometry.size.width * CGFloat(task.progressPercentage / 100),
+//                                    height: 6
+//                                )
+//                        }
+//                    }
+//                    .frame(height: 6)
+//                    
+//                    Text("\(Int(task.progressPercentage))% complete")
+//                        .font(.system(size: 11))
+//                        .foregroundColor(.secondary)
+//                }
+//                
+//                // Date
+//                Text(formattedDateRange(task))
+//                    .font(.system(size: 12))
+//                    .foregroundColor(.secondary)
+//            }
+//            
+//            Spacer()
+//            
+//            // Delete Button
+//            Button(action: {
+//                showDeleteAlert = true
+//            }) {
+//                Image(systemName: "trash")
+//                    .font(.system(size: 18))
+//                    .foregroundColor(.red)
+//            }
+//            .frame(width: 40, height: 40)
+//        }
+//        .padding(16)
+//        .background(Color.white)
+//        .cornerRadius(16)
+//        .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+//        .opacity(task.isCompleted ? 0.6 : 1.0)
+//        .alert("Delete Task", isPresented: $showDeleteAlert) {
+//            Button("Cancel", role: .cancel) { }
+//            Button("Delete", role: .destructive) {
+//                viewModel.deleteTask(task)
+//            }
+//        } message: {
+//            Text("Are you sure you want to delete '\(task.projectName)'?")
+//        }
+//    }
+//    
+//    private func getStatusText(_ task: TodoTask) -> String {
+//        if task.isCompleted {
+//            return "Completed"
+//        } else if task.isOverdue {
+//            return "Overdue"
+//        } else if task.isInProgress {
+//            return "In Progress"
+//        } else {
+//            return "Pending"
+//        }
+//    }
+//    
+//    private func getStatusColor(_ task: TodoTask) -> Color {
+//        if task.isCompleted {
+//            return Color.green
+//        } else if task.isOverdue {
+//            return Color.red
+//        } else if task.isInProgress {
+//            return Color.blue
+//        } else {
+//            return Color.gray
+//        }
+//    }
+//    
+//    private func getStatusIcon(_ task: TodoTask) -> String {
+//        if task.isCompleted {
+//            return "checkmark.circle.fill"
+//        } else if task.isOverdue {
+//            return "exclamationmark.circle.fill"
+//        } else if task.isInProgress {
+//            return "play.circle.fill"
+//        } else {
+//            return "circle"
+//        }
+//    }
+//    
+//    private func groupColor(_ group: String) -> Color {
+//        switch group {
+//        case "Work": return .blue
+//        case "Personal": return .purple
+//        case "Health": return .green
+//        case "Finance": return .orange
+//        default: return .gray
+//        }
+//    }
+//    
+//    private func formattedDateRange(_ task: TodoTask) -> String {
+//        let formatter = DateFormatter()
+//        formatter.dateFormat = "MMM dd, yyyy"
+//        return "\(formatter.string(from: task.startDate)) - \(formatter.string(from: task.endDate))"
+//    }
+//}
 
 private struct EmptyTaskList: View {
     var body: some View {

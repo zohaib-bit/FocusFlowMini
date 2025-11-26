@@ -16,14 +16,14 @@ struct TaskManagerApp: App {
         WindowGroup {
             ContentView()
         }
-        .modelContainer(for: Task.self)
+        .modelContainer(for: TodoTask.self)
     }
 }
 
 // Main ContentView with TabView
 struct ContentView: View {
     @Environment(\.modelContext) private var modelContext
-    @StateObject private var viewModel = TaskViewModel(openAIKey: "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")
+    @StateObject private var viewModel = TaskViewModel(apiKey: Config.openaiAPIKey)
     
     var body: some View {
         TabView {

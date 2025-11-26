@@ -11,15 +11,15 @@ struct AddTaskView: View {
     @EnvironmentObject private var viewModel: TaskViewModel
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
-
+    
     // --- Form fields
-    @State private var aiInput: String = ""              // NEW: where user types natural language for AI
+    @State private var aiInput: String = ""
     @State private var taskGroup = "Work"
     @State private var projectName = ""
     @State private var description = ""
     @State private var startDate = Date()
     @State private var endDate = Date()
-
+    
     // --- UI state
     @State private var showTaskGroupDropdown = false
     @State private var showStartDatePicker = false
@@ -27,33 +27,34 @@ struct AddTaskView: View {
     @State private var showSuccessAlert = false
     @State private var showErrorAlert = false
     @State private var showAIErrorAlert = false
-
+    
     let taskGroups = ["Work", "Personal", "Health", "Finance"]
-
+    
     var body: some View {
         ZStack {
             Background()
                 .ignoresSafeArea()
-
+            
             VStack(spacing: 0) {
                 Header()
                     .padding(.horizontal, 20)
                     .padding(.top, 50)
-
+                
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 16) {
-
-                        // ===== NEW: AI Input Field
+                        
+                        // ===== AI Input Field
                         VStack(alignment: .leading, spacing: 8) {
                             Text("AI Input")
                                 .font(.system(size: 13))
                                 .foregroundColor(.secondary)
-
+                            
                             TextField("Describe the task (e.g. 'Create Task for client tomorrow 5pm for Marketing project')", text: $aiInput, axis: .vertical)
                                 .padding(12)
                                 .background(Color.white)
                                 .cornerRadius(12)
-
+                                .lineLimit(3...6)
+                            
                             HStack {
                                 Spacer()
                                 // Generate with AI button
@@ -76,36 +77,36 @@ struct AddTaskView: View {
                                 .cornerRadius(10)
                             }
                         }
-
-                        // ===== Existing Form Fields (kept intact)
+                        
+                        // ===== Existing Form Fields
                         TaskGroupDropdown(
                             selectedGroup: $taskGroup,
                             isExpanded: $showTaskGroupDropdown,
                             items: taskGroups
                         )
-
+                        
                         ProjectNameField(projectName: $projectName)
-
+                        
                         DescriptionInputField(description: $description)
-
+                        
                         DatePickerCard(
                             title: "Start Date",
                             date: $startDate,
                             isOpen: $showStartDatePicker
                         )
-
+                        
                         DatePickerCard(
                             title: "End Date",
                             date: $endDate,
                             isOpen: $showEndDatePicker
                         )
-
+                        
                         Spacer(minLength: 100)
                     }
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                 }
-
+                
                 Button(action: saveTask) {
                     Text("Add Project")
                         .font(.system(size: 18, weight: .semibold))
@@ -119,46 +120,42 @@ struct AddTaskView: View {
                 .padding(.bottom, 90)
             }
         }
-        .gesture(
-            TapGesture().onEnded {
-                hideKeyboard()
-            }
-        )
+        .onTapGesture {
+            hideKeyboard()
+        }
         // Success alert for saveTask
         .alert("Success", isPresented: $showSuccessAlert) {
             Button("OK") {
                 clearForm()
-                dismiss()  // Close the sheet
+                dismiss()
             }
         } message: {
             Text("Task added successfully!")
         }
-        // Generic error alert for saveTask
+
         .alert("Error", isPresented: $showErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(viewModel.errorMessage ?? "Failed to add task")
         }
-        // AI-specific error alert
+
         .alert("AI Error", isPresented: $showAIErrorAlert) {
             Button("OK", role: .cancel) { }
         } message: {
             Text(viewModel.aiErrorMessage ?? "Failed to generate task with AI")
         }
         .onAppear {
-            // Ensure viewModel has context (you already do this)
             if viewModel.tasks.isEmpty {
                 viewModel.setModelContext(modelContext)
             }
         }
     }
-
+    
     // MARK: - Actions
-
-    /// Save the currently filled task fields to SwiftData (calls viewModel.addTask)
+    
     private func saveTask() {
         hideKeyboard()
-
+        
         let success = viewModel.addTask(
             taskGroup: taskGroup,
             projectName: projectName,
@@ -166,9 +163,8 @@ struct AddTaskView: View {
             startDate: startDate,
             endDate: endDate
         )
-
+        
         if success {
-            // Small delay to ensure SwiftData saves
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 showSuccessAlert = true
             }
@@ -176,8 +172,7 @@ struct AddTaskView: View {
             showErrorAlert = true
         }
     }
-
-    /// Clear all form fields to defaults
+    
     private func clearForm() {
         aiInput = ""
         projectName = ""
@@ -186,37 +181,29 @@ struct AddTaskView: View {
         startDate = Date()
         endDate = Date()
     }
-
-    /// Calls the ViewModel to generate a task from the AI input.
-    /// On success: the new task is already saved to SwiftData (we inserted in ViewModel)
-    /// Also autofill UI fields so the user can edit before saving (optional behavior).
+    
     private func generateWithAI() {
         hideKeyboard()
-//        Task {
-//            // If viewModel.generateTaskFromAI returns true, refresh UI.
-//            let success = await viewModel.generateTaskFromAI(input: aiInput)
-//            if success {
-//                // Grab the latest task that was inserted (most recent createdAt)
-//                if let newTask = viewModel.tasks.first {
-//                    // Autofill the form with values from the generated task so user can adjust
-//                    taskGroup = newTask.taskGroup
-//                    projectName = newTask.projectName
-//                    description = newTask.taskDescription
-//                    startDate = newTask.startDate
-//                    endDate = newTask.endDate
-//
-//                    // Show success feedback (but do not dismiss automatically, let user review)
-//                    showSuccessAlert = true
-//                }
-//            } else {
-//                // Show AI error
-//                showAIErrorAlert = true
-//            }
-//        }
+        Task {
+            let success = await self.viewModel.generateTaskFromAI(input: self.aiInput)
+            if success {
+                if let newTask = self.viewModel.tasks.first {
+                    self.taskGroup = newTask.taskGroup
+                    self.projectName = newTask.projectName
+                    self.description = newTask.taskDescription
+                    self.startDate = newTask.startDate
+                    self.endDate = newTask.endDate
+                    
+                    self.aiInput = ""
+                    self.showSuccessAlert = true
+                }
+            } else {
+                self.showAIErrorAlert = true
+            }
+        }
     }
 }
-
-// MARK: - Helpers + Subviews (unchanged from your original file)
+// MARK: - Helpers + Subviews
 
 extension View {
     func hideKeyboard() {
@@ -365,6 +352,7 @@ private struct DescriptionInputField: View {
                 .frame(height: 120)
                 .font(.system(size: 16))
                 .foregroundColor(.primary)
+                .scrollContentBackground(.hidden)
         }
         .padding(16)
         .background(Color.white)

@@ -10,7 +10,7 @@ import SwiftData
 
 struct Task_Detail: View {
     @Environment(\.dismiss) private var dismiss
-    @Query(sort: \Task.createdAt, order: .reverse) private var allTasks: [Task]
+    @Query(sort: \TodoTask.createdAt, order: .reverse) private var allTasks: [TodoTask]
     
     @State private var selectedFilter: TaskFilter = .all
     @State private var searchText = ""
@@ -24,13 +24,12 @@ struct Task_Detail: View {
     }
     
     // Filter tasks based on selected filter and search
-    var filteredTasks: [Task] {
+    var filteredTasks: [TodoTask] {
         var tasks = allTasks
         
-        // Apply filter
         switch selectedFilter {
         case .all:
-            break // Show all
+            break
         case .todo:
             tasks = tasks.filter { !$0.isInProgress && !$0.isCompleted && !$0.isOverdue }
         case .inProgress:
@@ -41,7 +40,6 @@ struct Task_Detail: View {
             tasks = tasks.filter { $0.isOverdue }
         }
         
-        // Apply search
         if !searchText.isEmpty {
             tasks = tasks.filter { task in
                 task.projectName.localizedCaseInsensitiveContains(searchText) ||
@@ -54,7 +52,7 @@ struct Task_Detail: View {
     }
     
     // Group tasks by category
-    var tasksByGroup: [String: [Task]] {
+    var tasksByGroup: [String: [TodoTask]] {
         Dictionary(grouping: filteredTasks, by: { $0.taskGroup })
     }
     
@@ -64,23 +62,20 @@ struct Task_Detail: View {
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Header
+                
                 Header(dismiss: dismiss, taskCount: filteredTasks.count)
                     .padding(.horizontal, 20)
                     .padding(.top, 110)
                 
-                // Filter Tabs
                 FilterTabs(selectedFilter: $selectedFilter)
                     .padding(.top, 20)
                 
-                // Task List
                 ScrollView(showsIndicators: false) {
                     VStack(spacing: 20) {
                         if filteredTasks.isEmpty {
                             EmptyTasksView(filter: selectedFilter.rawValue)
                                 .padding(.top, 60)
                         } else {
-                            // Group by task group
                             ForEach(tasksByGroup.keys.sorted(), id: \.self) { group in
                                 if let tasks = tasksByGroup[group] {
                                     TaskGroupSection(groupName: group, tasks: tasks)
@@ -114,10 +109,7 @@ private struct Header: View {
     
     var body: some View {
         HStack {
-            // Back Button
-            Button(action: {
-                dismiss()
-            }) {
+            Button(action: { dismiss() }) {
                 Image("ic_arrow")
                     .resizable()
                     .scaledToFill()
@@ -126,11 +118,9 @@ private struct Header: View {
             
             Spacer()
             
-            // Title
             VStack(spacing: 4) {
                 Text("All Tasks")
                     .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.black)
                 
                 Text("\(taskCount) task\(taskCount == 1 ? "" : "s")")
                     .font(.system(size: 14))
@@ -139,14 +129,12 @@ private struct Header: View {
             
             Spacer()
             
-            // Placeholder for symmetry
             Circle()
                 .fill(Color.clear)
                 .frame(width: 40, height: 40)
         }
     }
 }
-
 
 // MARK: - Filter Tabs
 private struct FilterTabs: View {
@@ -181,15 +169,13 @@ private struct FilterTabs: View {
 // MARK: - Task Group Section
 private struct TaskGroupSection: View {
     let groupName: String
-    let tasks: [Task]
+    let tasks: [TodoTask]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Group Header
             HStack {
                 Text(groupName)
                     .font(.system(size: 18, weight: .bold))
-                    .foregroundColor(.black)
                 
                 Spacer()
                 
@@ -203,7 +189,6 @@ private struct TaskGroupSection: View {
             }
             .padding(.horizontal, 4)
             
-            // Tasks
             VStack(spacing: 12) {
                 ForEach(tasks) { task in
                     DetailTaskCard(task: task)
@@ -215,20 +200,15 @@ private struct TaskGroupSection: View {
 
 // MARK: - Task Card
 private struct DetailTaskCard: View {
-    let task: Task
+    let task: TodoTask
     
     var cardColor: Color {
         switch task.taskGroup {
-        case "Work":
-            return Color(red: 0.85, green: 0.92, blue: 1.0)
-        case "Personal":
-            return Color(red: 1.0, green: 0.95, blue: 0.85)
-        case "Health":
-            return Color(red: 0.85, green: 1.0, blue: 0.90)
-        case "Finance":
-            return Color(red: 1.0, green: 0.90, blue: 0.95)
-        default:
-            return Color(red: 0.95, green: 0.95, blue: 0.95)
+        case "Work": return Color(red: 0.85, green: 0.92, blue: 1.0)
+        case "Personal": return Color(red: 1.0, green: 0.95, blue: 0.85)
+        case "Health": return Color(red: 0.85, green: 1.0, blue: 0.90)
+        case "Finance": return Color(red: 1.0, green: 0.90, blue: 0.95)
+        default: return Color(red: 0.95, green: 0.95, blue: 0.95)
         }
     }
     
@@ -298,7 +278,7 @@ private struct DetailTaskCard: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            // Header Row
+            
             HStack {
                 Image(systemName: icon)
                     .font(.system(size: 18))
@@ -313,13 +293,11 @@ private struct DetailTaskCard: View {
                 statusBadge
             }
             
-            // Task Name
             Text(task.projectName)
                 .font(.system(size: 17, weight: .bold))
                 .foregroundColor(.black)
                 .lineLimit(2)
             
-            // Description
             if !task.taskDescription.isEmpty {
                 Text(task.taskDescription)
                     .font(.system(size: 14))
@@ -327,7 +305,6 @@ private struct DetailTaskCard: View {
                     .lineLimit(2)
             }
             
-            // Date Range
             HStack(spacing: 8) {
                 Image(systemName: "calendar")
                     .font(.system(size: 12))
@@ -338,7 +315,6 @@ private struct DetailTaskCard: View {
                     .foregroundColor(.gray)
             }
             
-            // Progress Bar
             if !task.isCompleted {
                 VStack(alignment: .leading, spacing: 6) {
                     HStack {
@@ -388,7 +364,6 @@ private struct EmptyTasksView: View {
             
             Text("No \(filter) Tasks")
                 .font(.system(size: 20, weight: .bold))
-                .foregroundColor(.black)
             
             Text("Try adjusting your filters or add a new task")
                 .font(.system(size: 15))
@@ -404,6 +379,6 @@ private struct EmptyTasksView: View {
 #Preview {
     NavigationStack {
         Task_Detail()
-            .modelContainer(for: Task.self, inMemory: true)
+            .modelContainer(for: TodoTask.self, inMemory: true)
     }
 }

@@ -8,6 +8,11 @@
 import SwiftUI
 
 struct ProfileView: View {
+    
+    @EnvironmentObject private var viewModel: TaskViewModel
+    @EnvironmentObject private var authVM: AuthViewModel
+    @State private var showEditProfile = false
+
     var body: some View {
         
         ZStack {
@@ -21,24 +26,28 @@ struct ProfileView: View {
                         Header()
                             .padding(.horizontal, 20)
                         
-                        ProfileImage()
-                            .padding(.horizontal, 20)
+                        // Profile Image and User Info from Firebase
+                        ProfileImage(
+                            username: authVM.userDisplayName,
+                            email: authVM.userEmail
+                        )
+                        .padding(.horizontal, 20)
 
                         EditBtn {
-                            print("Edit tapped")
+                            showEditProfile = true
                         }
                         .padding(.horizontal, 20)
                         
                         ProfileMenuList()
                             .padding(.top, 20)
-                            .padding(.bottom, 120)  // for bottom nav
-
-
-
+                            .padding(.bottom, 120)
                     }
                 }
                 .padding(.top, 110)
             }
+        }
+        .sheet(isPresented: $showEditProfile) {
+            EditProfileView(authVM: authVM, isPresented: $showEditProfile)
         }
     }
 }
@@ -96,6 +105,10 @@ private struct Header: View {
 }
 
 private struct ProfileImage: View {
+    
+    let username: String
+    let email: String
+
     var body: some View {
         VStack(spacing: 16) {
             
@@ -105,13 +118,13 @@ private struct ProfileImage: View {
                 .frame(width: 150, height: 150)
                 .clipShape(Circle())
             
-            Text("Username")
+            Text(username)
                 .font(.system(size: 25, weight: .bold))
                 .foregroundColor(.primary)
 
-            Text("Email")
-                .font(.system(size: 20))
-                .foregroundColor(.black)
+            Text(email)
+                .font(.system(size: 16))
+                .foregroundColor(.gray)
                 .padding(.top, 5)
         }
         .padding(.vertical, 20)
@@ -127,7 +140,7 @@ private struct EditBtn: View {
                 .font(.system(size: 18, weight: .medium))
                 .foregroundColor(.white)
                 .padding()
-                .frame(maxWidth: UIScreen.main.bounds.width * 0.7) // 70% Width
+                .frame(maxWidth: UIScreen.main.bounds.width * 0.7)
                 .background(Color.appPrimary)
                 .cornerRadius(12)
         }
@@ -135,8 +148,10 @@ private struct EditBtn: View {
     }
 }
 
-
 private struct ProfileMenuList: View {
+    @EnvironmentObject private var authVM: AuthViewModel
+    @State private var showSignOutAlert = false
+    
     var body: some View {
         VStack(spacing: 0) {
             
@@ -160,8 +175,43 @@ private struct ProfileMenuList: View {
                 print("Go to about us")
             }
             
+            // Sign Out Button
+            Button(action: {
+                showSignOutAlert = true
+            }) {
+                HStack(spacing: 16) {
+                    Image(systemName: "arrow.left.circle.fill")
+                        .font(.system(size: 20))
+                        .foregroundColor(.red.opacity(0.8))
+                    
+                    Text("Sign Out")
+                        .font(.system(size: 18))
+                        .foregroundColor(.red)
+                    
+                    Spacer()
+                    
+                    Image(systemName: "chevron.right")
+                        .foregroundColor(.gray)
+                }
+                .padding()
+                .background(
+                    Color.red.opacity(0.08)
+                        .cornerRadius(12)
+                )
+            }
+            .padding(.horizontal, 20)
+            .padding(.vertical, 4)
+            
         }
         .cornerRadius(16)
+        .alert("Sign Out", isPresented: $showSignOutAlert) {
+            Button("Cancel", role: .cancel) { }
+            Button("Sign Out", role: .destructive) {
+                authVM.signOut()
+            }
+        } message: {
+            Text("Are you sure you want to sign out?")
+        }
     }
 }
 
@@ -190,7 +240,7 @@ private struct NavigationRow: View {
             }
             .padding()
             .background(
-                Color.appPrimary.opacity(0.08) // soft purple shade
+                Color.appPrimary.opacity(0.08)
                     .cornerRadius(12)
             )
         }
@@ -199,7 +249,67 @@ private struct NavigationRow: View {
     }
 }
 
+// Edit Profile Sheet
+struct EditProfileView: View {
+    @ObservedObject var authVM: AuthViewModel
+    @Binding var isPresented: Bool
+    @State private var tempUsername: String = ""
+    @State private var tempEmail: String = ""
+    
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                Color(.systemGray6)
+                    .ignoresSafeArea()
+                
+                VStack(spacing: 20) {
+                    Form {
+                        Section("Display Name") {
+                            TextField("Enter name", text: $tempUsername)
+                        }
+                        
+                        Section("Email") {
+                            TextField("Enter email", text: $tempEmail)
+                                .keyboardType(.emailAddress)
+                                .disabled(true)
+                        }
+                    }
+                    
+                    Button(action: saveChanges) {
+                        Text("Save Changes")
+                            .font(.system(size: 18, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                            .background(Color.appPrimary)
+                            .cornerRadius(12)
+                    }
+                    .padding()
+                    
+                    Spacer()
+                }
+                .navigationTitle("Edit Profile")
+                .navigationBarTitleDisplayMode(.inline)
+            }
+        }
+        .onAppear {
+            tempUsername = authVM.userDisplayName
+            tempEmail = authVM.userEmail
+        }
+    }
+    
+    private func saveChanges() {
+        Task {
+            let changeRequest = authVM.user?.createProfileChangeRequest()
+            changeRequest?.displayName = tempUsername
+            try? await changeRequest?.commitChanges()
+            isPresented = false
+        }
+    }
+}
 
 #Preview {
     ProfileView()
+        .environmentObject(TaskViewModel(apiKey: Config.openaiAPIKey))
+        .environmentObject(AuthViewModel())
 }
