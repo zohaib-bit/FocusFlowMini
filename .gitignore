@@ -13,7 +13,7 @@ Thumbs.db
 *.xcuserstate
 project.xcworkspace/
 xcuserdata/
-FlowFocusMini/FlowFocusMini/Resources/API/Config.swift
+FlowFocusMini/Resources/API/Config.swift
 
 # Eclipse
 .classpath
