@@ -106,116 +106,7 @@ struct HomeView: View {
     }
 }
 
-private struct SimpleSuggestionsSection: View {
-    let sampleSuggestions: [SimpleSuggestion] = [
-        SimpleSuggestion(title: "Morning Workout", category: "Health", description: "30-min fitness session"),
-        SimpleSuggestion(title: "Code Review", category: "Work", description: "Review pull requests"),
-        SimpleSuggestion(title: "Read Chapter", category: "Personal", description: "Read one chapter of book")
-    ]
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 16) {
-            // Section Header
-            HStack {
-                HStack(spacing: 8) {
-                    Image(systemName: "sparkles")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.appPrimary)
-                    
-                    Text("Suggested Tasks")
-                        .font(.system(size: 20, weight: .bold))
-                        .foregroundColor(.black)
-                }
-                
-                Spacer()
-            }
-            
-            // Suggestions Cards
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    ForEach(sampleSuggestions, id: \.title) { suggestion in
-                        SimpleSuggestionCard(suggestion: suggestion)
-                    }
-                }
-            }
-        }
-    }
-}
 
-// MARK: - Sample Suggestion Model
-private struct SimpleSuggestion {
-    let title: String
-    let category: String
-    let description: String
-}
-
-// MARK: - Simple Suggestion Card
-private struct SimpleSuggestionCard: View {
-    let suggestion: SimpleSuggestion
-    
-    var cardColor: Color {
-        switch suggestion.category.lowercased() {
-        case "work":
-            return Color(red: 0.85, green: 0.92, blue: 1.0)
-        case "personal":
-            return Color(red: 1.0, green: 0.95, blue: 0.85)
-        case "health":
-            return Color(red: 0.85, green: 1.0, blue: 0.90)
-        case "finance":
-            return Color(red: 1.0, green: 0.90, blue: 0.95)
-        default:
-            return Color(red: 0.95, green: 0.95, blue: 0.95)
-        }
-    }
-    
-    var icon: String {
-        switch suggestion.category.lowercased() {
-        case "work": return "briefcase.fill"
-        case "personal": return "person.fill"
-        case "health": return "heart.fill"
-        case "finance": return "dollarsign.circle.fill"
-        default: return "folder.fill"
-        }
-    }
-    
-    var iconColor: Color {
-        switch suggestion.category.lowercased() {
-        case "work": return .blue
-        case "personal": return .purple
-        case "health": return .green
-        case "finance": return .orange
-        default: return .gray
-        }
-    }
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(spacing: 8) {
-                Image(systemName: icon)
-                    .font(.system(size: 14))
-                    .foregroundColor(iconColor)
-                
-                Text(suggestion.category)
-                    .font(.system(size: 11, weight: .semibold))
-                    .foregroundColor(.gray)
-            }
-            
-            Text(suggestion.title)
-                .font(.system(size: 13, weight: .bold))
-                .foregroundColor(.black)
-                .lineLimit(2)
-            
-            Text(suggestion.description)
-                .font(.system(size: 11))
-                .foregroundColor(.gray)
-                .lineLimit(1)
-        }
-        .padding(12)
-        .frame(width: 160, height: 110)
-        .background(cardColor)
-        .cornerRadius(14)
-    }
-}
 
 private struct Background: View {
     var body: some View {
@@ -256,8 +147,9 @@ private struct Header: View {
                 }
                 .frame(width: totalWidth * 0.75, alignment: .leading)
                 
-                // Notification Icon
-                Button(action: {}) {
+                // Notification Screen
+               
+                NavigationLink(destination: NotificationView()) {
                     ZStack(alignment: .topTrailing) {
                         Image(systemName: "bell")
                             .font(.system(size: 22))
@@ -354,6 +246,165 @@ private struct TodaysTaskCard: View {
             .cornerRadius(24)
         }
         .frame(height: 146)
+    }
+}
+
+private struct SimpleSuggestionsSection: View {
+    @EnvironmentObject private var interestVM: InterestViewModel
+    @EnvironmentObject private var authVM: AuthViewModel
+    
+    @State private var suggestions: [SuggestedTask] = []
+    @State private var isLoading = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section Header
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.appPrimary)
+                    
+                    Text("Suggested Tasks")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.black)
+                }
+                
+                Spacer()
+            }
+            
+            // Loading State
+            if isLoading {
+                HStack {
+                    Spacer()
+                    ProgressView()
+                        .tint(.appPrimary)
+                    Spacer()
+                }
+                .frame(height: 110)
+            }
+            // Suggestions List
+            else if !suggestions.isEmpty {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(suggestions) { suggestion in
+                            SuggestionCard(suggestion: suggestion)
+                        }
+                    }
+                }
+            }
+            // Empty State
+            else {
+                VStack(spacing: 8) {
+                    Image(systemName: "lightbulb.slash")
+                        .font(.system(size: 24))
+                        .foregroundColor(.gray)
+                    
+                    Text("No suggestions yet")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundColor(.gray)
+                }
+                .frame(maxWidth: .infinity)
+                .frame(height: 110)
+                .background(Color.gray.opacity(0.1))
+                .cornerRadius(14)
+            }
+        }
+        .onAppear {
+            loadSuggestions()
+        }
+    }
+    
+    private func loadSuggestions() {
+        guard let userId = authVM.user?.uid else { return }
+        
+        let userInterests = interestVM.getInterestsArray(userId: userId)
+        
+        guard !userInterests.isEmpty else { return }
+        
+        isLoading = true
+        
+        Task {
+            do {
+                let service = SuggestionService(apiKey: Config.openaiAPIKey)
+                let generated = try await service.generateSuggestions(from: userInterests)
+                DispatchQueue.main.async {
+                    self.suggestions = generated
+                    self.isLoading = false
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.isLoading = false
+                }
+            }
+        }
+    }
+}
+
+private struct SuggestionCard: View {
+    let suggestion: SuggestedTask
+    
+    var cardColor: Color {
+        switch suggestion.category.lowercased() {
+        case "work":
+            return Color(red: 0.85, green: 0.92, blue: 1.0)
+        case "personal":
+            return Color(red: 1.0, green: 0.95, blue: 0.85)
+        case "health":
+            return Color(red: 0.85, green: 1.0, blue: 0.90)
+        case "finance":
+            return Color(red: 1.0, green: 0.90, blue: 0.95)
+        default:
+            return Color(red: 0.95, green: 0.95, blue: 0.95)
+        }
+    }
+    
+    var icon: String {
+        switch suggestion.category.lowercased() {
+        case "work": return "briefcase.fill"
+        case "personal": return "person.fill"
+        case "health": return "heart.fill"
+        case "finance": return "dollarsign.circle.fill"
+        default: return "folder.fill"
+        }
+    }
+    
+    var iconColor: Color {
+        switch suggestion.category.lowercased() {
+        case "work": return .blue
+        case "personal": return .purple
+        case "health": return .green
+        case "finance": return .orange
+        default: return .gray
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(iconColor)
+                
+                Text(suggestion.category)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.gray)
+            }
+            
+            Text(suggestion.title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.black)
+                .lineLimit(2)
+            
+            Text(suggestion.description)
+                .font(.system(size: 11))
+                .foregroundColor(.gray)
+                .lineLimit(2)
+        }
+        .padding(12)
+        .frame(width: 160, height: 110)
+        .background(cardColor)
+        .cornerRadius(14)
     }
 }
 

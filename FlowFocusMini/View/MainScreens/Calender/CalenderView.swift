@@ -49,6 +49,7 @@ struct CalenderView: View {
     }
     
     var body: some View {
+        NavigationStack{
         ZStack{
             Background()
                 .ignoresSafeArea()
@@ -74,7 +75,7 @@ struct CalenderView: View {
                 }
                 .padding(.top, 110)
             }
-        }
+        }}
     }
 }
 
@@ -113,19 +114,19 @@ private struct Header: View {
                 }
                 .frame(width: totalWidth * 0.33, alignment: .center)
                 
-                Button(action: {}) {
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: "bell")
-                            .font(.system(size: 22))
-                            .foregroundColor(.black)
-                        
-                        Circle()
-                            .fill(Color.appPrimary)
-                            .frame(width: 8, height: 8)
-                            .offset(x: 4, y: -4)
-                    }
-                }
-                .frame(width: totalWidth * 0.33, alignment: .trailing)
+                NavigationLink(destination: NotificationView()) {
+                               ZStack(alignment: .topTrailing) {
+                                   Image(systemName: "bell")
+                                       .font(.system(size: 22))
+                                       .foregroundColor(.black)
+                                   
+                                   // Notification dot
+                                   Circle()
+                                       .fill(Color.appPrimary)
+                                       .frame(width: 8, height: 8)
+                                       .offset(x: 4, y: -4)
+                               }
+                           }                .frame(width: totalWidth * 0.33, alignment: .trailing)
             }
         }
         .frame(height: 40)

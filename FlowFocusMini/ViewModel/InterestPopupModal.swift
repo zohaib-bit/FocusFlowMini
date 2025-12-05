@@ -13,7 +13,7 @@ struct InterestPopupModal: View {
     @EnvironmentObject var interestVM: InterestViewModel
     var onDismiss: () -> Void
     
-    let maxInterests = 20
+    let maxInterests = 5
     let interestCategories: [String: [String]] = [
         " Learning & Growth": ["Reading", "Languages", "Coding", "Online Courses", "Writing"],
         " Health & Wellness": ["Fitness", "Yoga", "Meditation", "Nutrition", "Sleep"],

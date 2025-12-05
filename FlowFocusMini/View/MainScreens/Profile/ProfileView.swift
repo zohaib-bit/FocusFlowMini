@@ -17,7 +17,7 @@ struct ProfileView: View {
     @State private var showUserInterests = false
 
     var body: some View {
-        
+        NavigationStack{
         ZStack {
             Background()
                 .ignoresSafeArea()
@@ -35,7 +35,7 @@ struct ProfileView: View {
                             email: authVM.userEmail
                         )
                         .padding(.horizontal, 20)
-
+                        
                         EditBtn {
                             showEditProfile = true
                         }
@@ -48,7 +48,7 @@ struct ProfileView: View {
                 }
                 .padding(.top, 110)
             }
-        }
+        }}
         .sheet(isPresented: $showEditProfile) {
             EditProfileView(authVM: authVM, isPresented: $showEditProfile)
         }
@@ -89,12 +89,13 @@ private struct Header: View {
                 }
                 .frame(width: totalWidth * 0.33, alignment: .center)
                 
-                Button(action: {}) {
+                NavigationLink(destination: NotificationView()) {
                     ZStack(alignment: .topTrailing) {
                         Image(systemName: "bell")
                             .font(.system(size: 22))
                             .foregroundColor(.black)
                         
+                        // Notification dot
                         Circle()
                             .fill(Color.appPrimary)
                             .frame(width: 8, height: 8)

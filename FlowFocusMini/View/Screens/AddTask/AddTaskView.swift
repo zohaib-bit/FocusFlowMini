@@ -41,42 +41,10 @@ struct AddTaskView: View {
                     .padding(.top, 50)
                 
                 ScrollView(showsIndicators: false) {
-                    VStack(spacing: 16) {
+                    VStack() {
                         
                         // ===== AI Input Field
-                        VStack(alignment: .leading, spacing: 8) {
-                            Text("AI Input")
-                                .font(.system(size: 13))
-                                .foregroundColor(.secondary)
-                            
-                            TextField("Describe the task (e.g. 'Create Task for client tomorrow 5pm for Marketing project')", text: $aiInput, axis: .vertical)
-                                .padding(12)
-                                .background(Color.white)
-                                .cornerRadius(12)
-                                .lineLimit(3...6)
-                            
-                            HStack {
-                                Spacer()
-                                // Generate with AI button
-                                Button(action: generateWithAI) {
-                                    if viewModel.isGeneratingWithAI {
-                                        ProgressView()
-                                            .progressViewStyle(CircularProgressViewStyle())
-                                            .frame(height: 36)
-                                            .frame(maxWidth: 140)
-                                    } else {
-                                        Text("Generate with AI")
-                                            .font(.system(size: 14, weight: .semibold))
-                                            .frame(height: 36)
-                                            .frame(maxWidth: 140)
-                                    }
-                                }
-                                .disabled(aiInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isGeneratingWithAI)
-                                .background(viewModel.isGeneratingWithAI ? Color.gray.opacity(0.4) : Color.appPrimary)
-                                .foregroundColor(.white)
-                                .cornerRadius(10)
-                            }
-                        }
+                        aiInputFieldView()
                         
                         // ===== Existing Form Fields
                         TaskGroupDropdown(
@@ -151,7 +119,64 @@ struct AddTaskView: View {
         }
     }
     
+    // MARK: - AI Input Field View
+    @ViewBuilder
+    private func aiInputFieldView() -> some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text("AI Input")
+                .font(.system(size: 13))
+                .foregroundColor(.secondary)
+            
+            TextField("Describe the task (e.g. 'Create Task for client tomorrow 5pm for Marketing project')", text: $aiInput, axis: .vertical)
+                .padding(12)
+                .background(Color.white)
+                .cornerRadius(12)
+                .lineLimit(3...6)
+            
+            HStack {
+                Spacer()
+                Button(action: generateWithAI) {
+                    if viewModel.isGeneratingWithAI {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .frame(height: 36)
+                            .frame(maxWidth: 140)
+                    } else {
+                        Text("Generate with AI")
+                            .font(.system(size: 14, weight: .semibold))
+                            .frame(height: 36)
+                            .frame(maxWidth: 140)
+                    }
+                }
+                .disabled(aiInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isGeneratingWithAI)
+                .background(viewModel.isGeneratingWithAI ? Color.gray.opacity(0.4) : Color.appPrimary)
+                .foregroundColor(.white)
+                .cornerRadius(10)
+            }
+        }
+    }
+    
     // MARK: - Actions
+    
+    private func generateWithAI() {
+        hideKeyboard()
+        Task {
+            let success = await viewModel.generateTaskFromAI(input: aiInput)
+            if success {
+                if let newTask = viewModel.tasks.first {
+                    taskGroup = newTask.taskGroup
+                    projectName = newTask.projectName
+                    description = newTask.taskDescription
+                    startDate = newTask.startDate
+                    endDate = newTask.endDate
+                    
+                    aiInput = ""
+                }
+            } else {
+                showAIErrorAlert = true
+            }
+        }
+    }
     
     private func saveTask() {
         hideKeyboard()
@@ -181,28 +206,8 @@ struct AddTaskView: View {
         startDate = Date()
         endDate = Date()
     }
-    
-    private func generateWithAI() {
-        hideKeyboard()
-        Task {
-            let success = await self.viewModel.generateTaskFromAI(input: self.aiInput)
-            if success {
-                if let newTask = self.viewModel.tasks.first {
-                    self.taskGroup = newTask.taskGroup
-                    self.projectName = newTask.projectName
-                    self.description = newTask.taskDescription
-                    self.startDate = newTask.startDate
-                    self.endDate = newTask.endDate
-                    
-                    self.aiInput = ""
-                    self.showSuccessAlert = true
-                }
-            } else {
-                self.showAIErrorAlert = true
-            }
-        }
-    }
 }
+
 // MARK: - Helpers + Subviews
 
 extension View {
@@ -227,7 +232,6 @@ private struct Header: View {
         GeometryReader { geo in
             let totalWidth = geo.size.width
             HStack(spacing: 0) {
-
                 Button(action: {
                     dismiss()
                 }) {
@@ -244,20 +248,6 @@ private struct Header: View {
                         .foregroundColor(.primary)
                 }
                 .frame(width: totalWidth * 0.33, alignment: .center)
-
-                Button(action: {}) {
-                    ZStack(alignment: .topTrailing) {
-                        Image(systemName: "bell")
-                            .font(.system(size: 22))
-                            .foregroundColor(.black)
-
-                        Circle()
-                            .fill(Color.appPrimary)
-                            .frame(width: 8, height: 8)
-                            .offset(x: 4, y: -4)
-                    }
-                }
-                .frame(width: totalWidth * 0.33, alignment: .trailing)
             }
         }
         .frame(height: 40)
@@ -272,7 +262,6 @@ private struct TaskGroupDropdown: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-
             HStack {
                 Text("Task Group")
                     .font(.system(size: 13))
@@ -283,7 +272,6 @@ private struct TaskGroupDropdown: View {
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.system(size: 18))
                     .foregroundColor(.black)
-                    .frame(alignment: .center)
             }
 
             HStack {
@@ -368,7 +356,6 @@ private struct DatePickerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-
             Text(title)
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)
