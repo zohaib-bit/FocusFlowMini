@@ -1,17 +1,12 @@
-
-//
-//  Client Interest.swift
-//  FlowFocusMini
-//
-//  Created by o9tech on 26/11/2025.
-//
-
 import SwiftUI
 
 struct Client_Interest: View {
     @State private var selectedInterests: Set<String> = []
+    @EnvironmentObject var authVM: AuthViewModel
+    @EnvironmentObject var interestVM: InterestViewModel
+    @Environment(\.dismiss) var dismiss
     
-    let maxInterests = 20
+    let maxInterests = 5
     let interestCategories: [String: [String]] = [
         " Learning & Growth": ["Reading", "Languages", "Coding", "Online Courses", "Writing"],
         " Health & Wellness": ["Fitness", "Yoga", "Meditation", "Nutrition", "Sleep"],
@@ -26,7 +21,6 @@ struct Client_Interest: View {
     
     var body: some View {
         ZStack {
-            // Background
             Background()
                 .ignoresSafeArea()
             
@@ -86,19 +80,31 @@ struct Client_Interest: View {
                 
                 // Footer Buttons
                 VStack(spacing: 12) {
-                    Button(action: {}) {
-                        Text("Next")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(14)
-                            .background(isNextDisabled ? Color.gray.opacity(0.3) : Color.appPrimary)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
+                    Button(action: saveInterestsAndNavigate) {
+                        if interestVM.isLoading {
+                            ProgressView()
+                                .tint(.white)
+                        } else {
+                            Text("Next")
+                                .font(.system(size: 16, weight: .semibold))
+                        }
                     }
-                    .disabled(isNextDisabled)
+                    .frame(maxWidth: .infinity)
+                    .padding(14)
+                    .background(isNextDisabled ? Color.gray.opacity(0.3) : Color.appPrimary)
+                    .foregroundColor(.white)
+                    .cornerRadius(10)
+                    .disabled(isNextDisabled || interestVM.isLoading)
                 }
                 .padding(20)
             }
+        }
+        .alert("Error", isPresented: .constant(!interestVM.errorMessage.isEmpty)) {
+            Button("OK") {
+                interestVM.errorMessage = ""
+            }
+        } message: {
+            Text(interestVM.errorMessage)
         }
     }
     
@@ -107,6 +113,23 @@ struct Client_Interest: View {
             selectedInterests.remove(interest)
         } else if selectedInterests.count < maxInterests {
             selectedInterests.insert(interest)
+        }
+    }
+    
+    private func saveInterestsAndNavigate() {
+        guard let userId = authVM.user?.uid else {
+            interestVM.errorMessage = "User not found"
+            return
+        }
+        
+        let interestsArray = Array(selectedInterests)
+        print("DEBUG: Saving \(interestsArray.count) interests for user \(userId)")
+        interestVM.saveUserInterests(interestsArray, userId: userId)
+        
+        // Wait a bit then dismiss
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+            print("DEBUG: Dismissing Client_Interest screen")
+            dismiss()
         }
     }
 }
@@ -119,19 +142,13 @@ struct InterestChip: View {
     
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 6) {
-                if isSelected {
-                    Image(systemName: "checkmark.circle.fill")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-                Text(interest)
-                    .font(.system(size: 14, weight: .medium))
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(isSelected ? Color.appPrimary : Color.gray.opacity(0.1))
-            .foregroundColor(isSelected ? .white : .black)
-            .cornerRadius(8)
+            Text(interest)
+                .font(.system(size: 14, weight: .medium))
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(isSelected ? Color.appPrimary : Color.gray.opacity(0.1))
+                .foregroundColor(isSelected ? .white : .black)
+                .cornerRadius(8)
         }
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.5 : 1.0)
@@ -181,8 +198,4 @@ private struct Background: View {
             .resizable()
             .scaledToFill()
     }
-}
-
-#Preview {
-    Client_Interest()
 }

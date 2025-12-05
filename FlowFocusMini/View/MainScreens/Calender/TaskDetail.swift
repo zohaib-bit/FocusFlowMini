@@ -201,6 +201,9 @@ private struct TaskGroupSection: View {
 // MARK: - Task Card
 private struct DetailTaskCard: View {
     let task: TodoTask
+    @State private var showStatusDropdown = false
+    @State private var taskStatus: String = ""
+    @Environment(\.modelContext) private var modelContext
     
     var cardColor: Color {
         switch task.taskGroup {
@@ -232,41 +235,15 @@ private struct DetailTaskCard: View {
         }
     }
     
-    var statusBadge: some View {
-        Group {
-            if task.isCompleted {
-                Label("Completed", systemImage: "checkmark.circle.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.green)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.green.opacity(0.15))
-                    .cornerRadius(8)
-            } else if task.isOverdue {
-                Label("Overdue", systemImage: "exclamationmark.triangle.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.red)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.red.opacity(0.15))
-                    .cornerRadius(8)
-            } else if task.isInProgress {
-                Label("In Progress", systemImage: "clock.fill")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.orange)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.orange.opacity(0.15))
-                    .cornerRadius(8)
-            } else {
-                Label("To Do", systemImage: "circle")
-                    .font(.system(size: 12, weight: .semibold))
-                    .foregroundColor(.gray)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 4)
-                    .background(Color.gray.opacity(0.15))
-                    .cornerRadius(8)
-            }
+    var currentStatus: String {
+        if task.isCompleted {
+            return "Completed"
+        } else if task.isOverdue {
+            return "Overdue"
+        } else if task.isInProgress {
+            return "In Progress"
+        } else {
+            return "To Do"
         }
     }
     
@@ -274,6 +251,28 @@ private struct DetailTaskCard: View {
         let formatter = DateFormatter()
         formatter.dateFormat = "MMM d"
         return formatter
+    }
+    
+    func updateTaskStatus(_ newStatus: String) {
+        switch newStatus {
+        case "Completed":
+            task.markAsCompleted()
+            print("✅ Task marked as Completed")
+            
+        case "In Progress":
+            task.markAsInProgress()
+            print("⏳ Task marked as In Progress")
+            
+        case "To Do":
+            task.markAsToDo()
+            print("📝 Task marked as To Do")
+            
+        default:
+            break
+        }
+        
+        // Save changes
+        try? modelContext.save()
     }
     
     var body: some View {
@@ -290,7 +289,22 @@ private struct DetailTaskCard: View {
                 
                 Spacer()
                 
-                statusBadge
+                // MARK: - Dynamic Status Badge (Clickable)
+                Menu {
+                    Button(action: { updateTaskStatus("To Do") }) {
+                        Label("To Do", systemImage: "circle")
+                    }
+                    
+                    Button(action: { updateTaskStatus("In Progress") }) {
+                        Label("In Progress", systemImage: "clock.fill")
+                    }
+                    
+                    Button(action: { updateTaskStatus("Completed") }) {
+                        Label("Completed", systemImage: "checkmark.circle.fill")
+                    }
+                } label: {
+                    statusBadge
+                }
             }
             
             Text(task.projectName)
@@ -343,12 +357,61 @@ private struct DetailTaskCard: View {
                     }
                     .frame(height: 6)
                 }
+            } else {
+                // Show completion message instead of progress bar
+                HStack(spacing: 8) {
+                    Image(systemName: "checkmark.circle.fill")
+                        .foregroundColor(.green)
+                    
+                    Text("Task Completed!")
+                        .font(.system(size: 12, weight: .semibold))
+                        .foregroundColor(.green)
+                }
+                .padding(.vertical, 8)
             }
         }
         .padding(16)
         .background(Color.white)
         .cornerRadius(16)
         .shadow(color: Color.black.opacity(0.05), radius: 8, x: 0, y: 2)
+    }
+    
+    var statusBadge: some View {
+        Group {
+            if task.isCompleted {
+                Label("Completed", systemImage: "checkmark.circle.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.green)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.green.opacity(0.15))
+                    .cornerRadius(8)
+            } else if task.isOverdue {
+                Label("Overdue", systemImage: "exclamationmark.triangle.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.red)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.red.opacity(0.15))
+                    .cornerRadius(8)
+            } else if task.isInProgress {
+                Label("In Progress", systemImage: "clock.fill")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.orange)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.orange.opacity(0.15))
+                    .cornerRadius(8)
+            } else {
+                Label("To Do", systemImage: "circle")
+                    .font(.system(size: 12, weight: .semibold))
+                    .foregroundColor(.gray)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                    .background(Color.gray.opacity(0.15))
+                    .cornerRadius(8)
+            }
+        }
     }
 }
 

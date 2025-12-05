@@ -4,7 +4,9 @@ import SwiftData
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel = TaskViewModel(apiKey: Config.openaiAPIKey)
-    
+    @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var interestVM: InterestViewModel
+
     @State private var selectedTab = 0
     @State private var showAddTask = false
 
@@ -24,25 +26,21 @@ struct RootView: View {
                     .tag(2)
                     .tabItem {
                         Image(systemName: "calendar")
-                        .frame(width: 24, height: 24)
-
+                            .frame(width: 24, height: 24)
                     }
-                
 
                 DocumentView()
                     .tag(1)
                     .tabItem {
                         Image(systemName: "doc.fill")
-                        .frame(width: 24, height: 24)
-
+                            .frame(width: 24, height: 24)
                     }
 
                 ProfileView()
                     .tag(3)
                     .tabItem {
                         Image(systemName: "person.2.fill")
-                        .frame(width: 24, height: 24)
-
+                            .frame(width: 24, height: 24)
                     }
             }
             .accentColor(.appPrimary)
@@ -61,13 +59,13 @@ struct RootView: View {
                         .clipShape(Circle())
                         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
                 }
-                .offset(y: -20)  // lift above tab bar
+                .offset(y: -20)
             }
         }
-        .environmentObject(viewModel)  // ← CRITICAL: This injects ViewModel
+        .environmentObject(viewModel)
         .sheet(isPresented: $showAddTask) {
-            Client_Interest()
-                .environmentObject(viewModel)  // ← CRITICAL: Re-inject for sheet
+            AddTaskView()
+                .environmentObject(viewModel)
         }
         .onAppear {
             viewModel.setModelContext(modelContext)
@@ -78,4 +76,6 @@ struct RootView: View {
 #Preview {
     RootView()
         .modelContainer(for: TodoTask.self)
+        .environmentObject(AuthViewModel())
+        .environmentObject(InterestViewModel(modelContext: ModelContext(try! ModelContainer(for: UserInterests.self))))
 }

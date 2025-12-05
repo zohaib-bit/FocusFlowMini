@@ -35,7 +35,7 @@ struct FlowFocusMiniApp: App {
     }
 
     init() {
-        let schema = Schema([TodoTask.self])
+        let schema = Schema([TodoTask.self, UserInterests.self])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
@@ -44,7 +44,6 @@ struct FlowFocusMiniApp: App {
             fatalError("ModelContainer initialization failed: \(error)")
         }
 
-        // Inject TaskViewModel
         let tempVM = TaskViewModel(modelContext: modelContainer.mainContext,
                                    apiKey: Config.openaiAPIKey)
         _taskVM = StateObject(wrappedValue: tempVM)

@@ -5,11 +5,15 @@
 //  Created by o9tech on 25/11/2025.
 //
 
+
 import SwiftUI
+import SwiftData
 
 struct AppRootView: View {
     @EnvironmentObject var authVM: AuthViewModel
     @StateObject private var flowVM = AppFlowViewModel()
+    @Environment(\.modelContext) private var modelContext
+    @State private var interestVM: InterestViewModel?
 
     var body: some View {
         Group {
@@ -23,14 +27,22 @@ struct AppRootView: View {
                 }
             }
             else if authVM.user == nil {
-                // User not logged in - show SignIn
                 SignIn()
                     .environmentObject(authVM)
             }
             else {
                 // User is logged in - show main app
-                RootView()
-                    .environmentObject(authVM)
+                if let interestVM = interestVM {
+                    RootView()
+                        .environmentObject(authVM)
+                        .environmentObject(interestVM)
+                }
+            }
+        }
+        .onAppear {
+            // Initialize InterestViewModel
+            if interestVM == nil {
+                interestVM = InterestViewModel(modelContext: modelContext)
             }
         }
     }

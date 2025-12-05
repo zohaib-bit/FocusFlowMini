@@ -10,7 +10,11 @@ import SwiftData
 
 struct HomeView: View {
     @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var interestVM: InterestViewModel
     @Query(sort: \TodoTask.createdAt, order: .reverse) private var allTasks: [TodoTask]
+    
+    @State private var showInterestPopup = false
+    @State private var hasCheckedInterests = false
     
     // Computed properties for real-time filtering
     var inProgressTasks: [TodoTask] {
@@ -30,54 +34,195 @@ struct HomeView: View {
     }
     
     var body: some View {
-        NavigationStack{
-            ZStack {
-                // Background respects safe area
-                Background()
-                    .ignoresSafeArea()
-                
-                VStack {
+        ZStack {
+            NavigationStack {
+                ZStack {
+                    // Background respects safe area
+                    Background()
+                        .ignoresSafeArea()
                     
-                    ScrollView(showsIndicators: false) {
-                        VStack(spacing: 0) {
-                            
-                            Header(username: authVM.userDisplayName)
+                    VStack {
+                        ScrollView(showsIndicators: false) {
+                            VStack(spacing: 0) {
+                                Header(username: authVM.userDisplayName)
+                                    .padding(.horizontal, 20)
+                                
+                                TodaysTaskCard(
+                                    totalTasks: totalTasks,
+                                    completedTasks: completedTasksCount
+                                )
                                 .padding(.horizontal, 20)
-                            
-                            TodaysTaskCard(
-                                totalTasks: totalTasks,
-                                completedTasks: completedTasksCount
-                            )
-                            .padding(.horizontal, 20)
-                            .padding(.top, 24)
-                            .padding(.bottom, 24)
-                            
-                            InProgressSection(tasks: inProgressTasks)
-                                .padding(.horizontal, 20)
+                                .padding(.top, 24)
                                 .padding(.bottom, 24)
-                            
-                            TaskGroupsSection(
-                                allTasks: allTasks,
-                                tasksByGroup: tasksByGroup
-                            )
-                            .padding(.horizontal, 20)
-                            .padding(.bottom, 120)  // for bottom nav
+                                
+                                SimpleSuggestionsSection()
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 24)
+                                
+                                InProgressSection(tasks: inProgressTasks)
+                                    .padding(.horizontal, 20)
+                                    .padding(.bottom, 24)
+                                
+                                TaskGroupsSection(
+                                    allTasks: allTasks,
+                                    tasksByGroup: tasksByGroup
+                                )
+                                .padding(.horizontal, 20)
+                                .padding(.bottom, 120)  // for bottom nav
+                            }
+                        }
+                        .padding(.top, 110)  // space below notch
+                    }
+                }
+                .navigationBarHidden(true)
+            }
+            
+            // Interest Popup Modal - appears after 2 seconds
+            if showInterestPopup {
+                InterestPopupModal(onDismiss: {
+                    showInterestPopup = false
+                })
+                .environmentObject(authVM)
+                .environmentObject(interestVM)
+            }
+        }
+        .onAppear {
+            if !hasCheckedInterests {
+                hasCheckedInterests = true
+                
+                // Check if user has interests
+                if let userId = authVM.user?.uid {
+                    let interests = interestVM.getInterestsArray(userId: userId)
+                    
+                    // Show popup after 2 seconds if no interests
+                    if interests.isEmpty {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) {
+                            showInterestPopup = true
                         }
                     }
-                    .padding(.top,110)  // space below notch
                 }
             }
-            .navigationBarHidden(true)
         }
     }
 }
 
-private struct Background: View {
-        var body: some View{
-            Image("bg_home")
-                .resizable()
-                .scaledToFill()
+private struct SimpleSuggestionsSection: View {
+    let sampleSuggestions: [SimpleSuggestion] = [
+        SimpleSuggestion(title: "Morning Workout", category: "Health", description: "30-min fitness session"),
+        SimpleSuggestion(title: "Code Review", category: "Work", description: "Review pull requests"),
+        SimpleSuggestion(title: "Read Chapter", category: "Personal", description: "Read one chapter of book")
+    ]
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            // Section Header
+            HStack {
+                HStack(spacing: 8) {
+                    Image(systemName: "sparkles")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.appPrimary)
+                    
+                    Text("Suggested Tasks")
+                        .font(.system(size: 20, weight: .bold))
+                        .foregroundColor(.black)
+                }
+                
+                Spacer()
+            }
+            
+            // Suggestions Cards
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 12) {
+                    ForEach(sampleSuggestions, id: \.title) { suggestion in
+                        SimpleSuggestionCard(suggestion: suggestion)
+                    }
+                }
+            }
         }
+    }
+}
+
+// MARK: - Sample Suggestion Model
+private struct SimpleSuggestion {
+    let title: String
+    let category: String
+    let description: String
+}
+
+// MARK: - Simple Suggestion Card
+private struct SimpleSuggestionCard: View {
+    let suggestion: SimpleSuggestion
+    
+    var cardColor: Color {
+        switch suggestion.category.lowercased() {
+        case "work":
+            return Color(red: 0.85, green: 0.92, blue: 1.0)
+        case "personal":
+            return Color(red: 1.0, green: 0.95, blue: 0.85)
+        case "health":
+            return Color(red: 0.85, green: 1.0, blue: 0.90)
+        case "finance":
+            return Color(red: 1.0, green: 0.90, blue: 0.95)
+        default:
+            return Color(red: 0.95, green: 0.95, blue: 0.95)
+        }
+    }
+    
+    var icon: String {
+        switch suggestion.category.lowercased() {
+        case "work": return "briefcase.fill"
+        case "personal": return "person.fill"
+        case "health": return "heart.fill"
+        case "finance": return "dollarsign.circle.fill"
+        default: return "folder.fill"
+        }
+    }
+    
+    var iconColor: Color {
+        switch suggestion.category.lowercased() {
+        case "work": return .blue
+        case "personal": return .purple
+        case "health": return .green
+        case "finance": return .orange
+        default: return .gray
+        }
+    }
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack(spacing: 8) {
+                Image(systemName: icon)
+                    .font(.system(size: 14))
+                    .foregroundColor(iconColor)
+                
+                Text(suggestion.category)
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundColor(.gray)
+            }
+            
+            Text(suggestion.title)
+                .font(.system(size: 13, weight: .bold))
+                .foregroundColor(.black)
+                .lineLimit(2)
+            
+            Text(suggestion.description)
+                .font(.system(size: 11))
+                .foregroundColor(.gray)
+                .lineLimit(1)
+        }
+        .padding(12)
+        .frame(width: 160, height: 110)
+        .background(cardColor)
+        .cornerRadius(14)
+    }
+}
+
+private struct Background: View {
+    var body: some View {
+        Image("bg_home")
+            .resizable()
+            .scaledToFill()
+    }
 }
 
 private struct Header: View {
@@ -120,7 +265,7 @@ private struct Header: View {
                         
                         // Notification dot
                         Circle()
-                            .fill(Color.appPrimary) // Purple
+                            .fill(Color.appPrimary)
                             .frame(width: 8, height: 8)
                             .offset(x: 4, y: -4)
                     }
@@ -129,15 +274,13 @@ private struct Header: View {
             }
         }
         .frame(height: 50)
-        
     }
 }
 
-struct TodaysTaskCard: View {
+private struct TodaysTaskCard: View {
     let totalTasks: Int
     let completedTasks: Int
     
-    // Calculate today's completion percentage
     var todaysProgress: Double {
         guard totalTasks > 0 else { return 0 }
         return Double(completedTasks) / Double(totalTasks)
@@ -154,7 +297,6 @@ struct TodaysTaskCard: View {
     }
     
     var body: some View {
-        
         GeometryReader { geo in
             HStack(spacing: 16) {
                 // Left side - Text and Button
@@ -164,7 +306,6 @@ struct TodaysTaskCard: View {
                         .foregroundColor(.white)
                         .multilineTextAlignment(.leading)
                     
-                    // Show task count
                     Text("\(completedTasks) of \(totalTasks) completed")
                         .font(.system(size: 12))
                         .foregroundColor(.white.opacity(0.9))
@@ -177,21 +318,16 @@ struct TodaysTaskCard: View {
                             .padding(.vertical, 10)
                             .background(Color.white)
                             .cornerRadius(12)
-                        
                     }
-
                 }
                 .frame(width: geo.size.width * 0.37)
                 
-                
                 // Right side Percentage circle
                 ZStack {
-                    // Making Background circle
                     Circle()
                         .stroke(Color.white.opacity(0.3), lineWidth: 8)
                         .frame(width: 80, height: 80)
                     
-                    // Making Progress circle
                     Circle()
                         .trim(from: 0, to: todaysProgress)
                         .stroke(Color.white, style: StrokeStyle(lineWidth: 8, lineCap: .round))
@@ -199,14 +335,12 @@ struct TodaysTaskCard: View {
                         .rotationEffect(.degrees(-90))
                         .animation(.easeInOut(duration: 0.5), value: todaysProgress)
                     
-                    // Percentage text
                     Text("\(Int(todaysProgress * 100))%")
                         .font(.system(size: 20, weight: .bold))
                         .foregroundColor(.white)
                 }
                 .frame(width: geo.size.width * 0.35, alignment: .trailing)
                 
-                // Three dots menu
                 Button(action: {}) {
                     Image(systemName: "ellipsis")
                         .font(.system(size: 16))
@@ -216,19 +350,18 @@ struct TodaysTaskCard: View {
             }
             .padding(20)
             .frame(height: 146)
-            .background(Color.appPrimary) // Purple
+            .background(Color.appPrimary)
             .cornerRadius(24)
         }
         .frame(height: 146)
     }
 }
 
-struct InProgressSection: View {
+private struct InProgressSection: View {
     let tasks: [TodoTask]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Section Header
             HStack {
                 Text("In Progress")
                     .font(.system(size: 20, weight: .bold))
@@ -243,7 +376,6 @@ struct InProgressSection: View {
                 }
             }
             
-            // Task Cards
             if tasks.isEmpty {
                 EmptyStateCard(message: "No tasks in progress")
             } else {
@@ -259,21 +391,21 @@ struct InProgressSection: View {
     }
 }
 
-struct TaskCard: View {
+private struct TaskCard: View {
     let task: TodoTask
     
     var cardColor: Color {
         switch task.taskGroup {
         case "Work":
-            return Color(red: 0.85, green: 0.92, blue: 1.0) // Light blue
+            return Color(red: 0.85, green: 0.92, blue: 1.0)
         case "Personal":
-            return Color(red: 1.0, green: 0.95, blue: 0.85) // Light orange
+            return Color(red: 1.0, green: 0.95, blue: 0.85)
         case "Health":
-            return Color(red: 0.85, green: 1.0, blue: 0.90) // Light green
+            return Color(red: 0.85, green: 1.0, blue: 0.90)
         case "Finance":
-            return Color(red: 1.0, green: 0.90, blue: 0.95) // Light pink
+            return Color(red: 1.0, green: 0.90, blue: 0.95)
         default:
-            return Color(red: 0.95, green: 0.95, blue: 0.95) // Light gray
+            return Color(red: 0.95, green: 0.95, blue: 0.95)
         }
     }
     
@@ -326,7 +458,6 @@ struct TaskCard: View {
                 .foregroundColor(.black)
                 .lineLimit(2)
             
-            // Progress Bar
             GeometryReader { progressGeo in
                 ZStack(alignment: .leading) {
                     RoundedRectangle(cornerRadius: 4)
@@ -352,14 +483,13 @@ struct TaskCard: View {
     }
 }
 
-struct TaskGroupsSection: View {
+private struct TaskGroupsSection: View {
     let allTasks: [TodoTask]
     let tasksByGroup: (String) -> [TodoTask]
     let groups = ["Work", "Personal", "Health", "Finance"]
     
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            // Section Header
             HStack {
                 Text("Task Groups")
                     .font(.system(size: 20, weight: .bold))
@@ -367,13 +497,11 @@ struct TaskGroupsSection: View {
                 
                 Spacer()
                 
-                // Show total tasks across all groups
                 Text("\(allTasks.count) total")
                     .font(.system(size: 14))
                     .foregroundColor(.gray)
             }
             
-            // Task Group Cards - Show ALL groups with counts
             VStack(spacing: 12) {
                 ForEach(groups, id: \.self) { group in
                     let groupTasks = tasksByGroup(group)
@@ -387,7 +515,7 @@ struct TaskGroupsSection: View {
     }
 }
 
-struct TaskGroupCard: View {
+private struct TaskGroupCard: View {
     let title: String
     let tasks: [TodoTask]
     
@@ -427,19 +555,16 @@ struct TaskGroupCard: View {
     
     var body: some View {
         HStack(spacing: 16) {
-            // Icon
             Image(systemName: icon)
                 .font(.system(size: 24))
                 .foregroundColor(iconColor)
                 .frame(width: 40)
             
-            // Text
             VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.black)
                 
-                // Show "0 Tasks" even if empty
                 Text("\(taskCount) Task\(taskCount == 1 ? "" : "s")")
                     .font(.system(size: 14))
                     .foregroundColor(taskCount == 0 ? .gray.opacity(0.6) : .gray)
@@ -447,14 +572,11 @@ struct TaskGroupCard: View {
             
             Spacer()
             
-            // Progress Circle
             ZStack {
-                // Background circle
                 Circle()
                     .stroke(progressColor.opacity(0.2), lineWidth: 6)
                     .frame(width: 50, height: 50)
                 
-                // Progress circle - only show if there are tasks
                 if taskCount > 0 {
                     Circle()
                         .trim(from: 0, to: progress)
@@ -464,7 +586,6 @@ struct TaskGroupCard: View {
                         .animation(.easeInOut(duration: 0.5), value: progress)
                 }
                 
-                // Percentage text
                 Text(taskCount > 0 ? "\(Int(progress * 100))%" : "0%")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundColor(taskCount > 0 ? progressColor : .gray.opacity(0.6))
@@ -474,11 +595,11 @@ struct TaskGroupCard: View {
         .background(Color.white)
         .cornerRadius(20)
         .shadow(color: Color.black.opacity(0.05), radius: 10, x: 0, y: 2)
-        .opacity(taskCount == 0 ? 0.6 : 1.0) // Dim empty groups slightly
+        .opacity(taskCount == 0 ? 0.6 : 1.0)
     }
 }
 
-struct EmptyStateCard: View {
+private struct EmptyStateCard: View {
     let message: String
     
     var body: some View {
@@ -502,4 +623,5 @@ struct EmptyStateCard: View {
     HomeView()
         .modelContainer(for: TodoTask.self, inMemory: true)
         .environmentObject(AuthViewModel())
+        .environmentObject(InterestViewModel(modelContext: ModelContext(try! ModelContainer(for: UserInterests.self))))
 }
