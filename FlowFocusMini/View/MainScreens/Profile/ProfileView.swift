@@ -153,33 +153,46 @@ private struct EditBtn: View {
         .frame(maxWidth: .infinity)
     }
 }
-// MARK: - User Interests View (FIXED)
+
+// MARK: - User Interests View (EDITABLE WITH CATEGORIES)
 struct UserInterestsView: View {
     @EnvironmentObject private var interestVM: InterestViewModel
     @EnvironmentObject private var authVM: AuthViewModel
     @Binding var isPresented: Bool
     @State private var userInterests: [String] = []
     @State private var isLoading = true
+    @State private var isEditing = false
+    @State private var isSaving = false
+    
+    let interestCategories: [String: [String]] = [
+        "Learning & Growth": ["Reading", "Languages", "Coding", "Online Courses", "Writing"],
+        "Health & Wellness": ["Fitness", "Yoga", "Meditation", "Nutrition", "Sleep"],
+        "Daily Life": ["Cooking", "Cleaning", "Budgeting", "Shopping", "Home Repair"],
+        "Creativity & Hobbies": ["Drawing", "Music", "Photography", "Gardening", "DIY Projects"],
+        "Social & Community": ["Volunteering", "Parenting", "Pet Care", "Travel Planning"]
+    ]
     
     var body: some View {
         ZStack {
-            // Clean background color instead of image
             Color(.systemBackground)
                 .ignoresSafeArea()
             
             VStack(spacing: 0) {
-                // Custom Header
                 CustomSheetHeader(
                     title: "My Interests",
-                    onClose: { isPresented = false }
+                    onClose: { isPresented = false },
+                    editAction: { isEditing.toggle() },
+                    isEditing: isEditing,
+                    isSaving: isSaving
                 )
                 
-                // Content
                 if isLoading {
                     Spacer()
                     ProgressView()
                         .tint(.appPrimary)
                     Spacer()
+                } else if isEditing {
+                    editInterestsView
                 } else if userInterests.isEmpty {
                     emptyStateView
                 } else {
@@ -206,7 +219,7 @@ struct UserInterestsView: View {
                     .font(.system(size: 22, weight: .bold))
                     .foregroundColor(.primary)
                 
-                Text("Start by selecting your interests to\npersonalize your experience")
+                Text("Tap Edit to select your interests and\npersonalize your experience")
                     .font(.system(size: 15))
                     .foregroundColor(.secondary)
                     .multilineTextAlignment(.center)
@@ -215,9 +228,8 @@ struct UserInterestsView: View {
             
             Spacer()
             
-            // Close Button
-            Button(action: { isPresented = false }) {
-                Text("Close")
+            Button(action: { isEditing = true }) {
+                Text("Add Interests")
                     .font(.system(size: 16, weight: .semibold))
                     .foregroundColor(.white)
                     .frame(maxWidth: .infinity)
@@ -230,12 +242,11 @@ struct UserInterestsView: View {
         }
     }
     
-    // MARK: - Interests Content
+    // MARK: - View Interests
     private var interestsContentView: some View {
         VStack(spacing: 0) {
             ScrollView(showsIndicators: false) {
                 VStack(alignment: .leading, spacing: 20) {
-                    // Section Header
                     VStack(alignment: .leading, spacing: 8) {
                         Text("Your Selected Interests")
                             .font(.system(size: 20, weight: .bold))
@@ -248,7 +259,6 @@ struct UserInterestsView: View {
                     .padding(.horizontal, 20)
                     .padding(.top, 20)
                     
-                    // Interests Grid using LazyVGrid
                     LazyVGrid(
                         columns: [
                             GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 12)
@@ -264,7 +274,6 @@ struct UserInterestsView: View {
                 }
             }
             
-            // Bottom Button
             VStack(spacing: 0) {
                 Divider()
                 
@@ -284,10 +293,104 @@ struct UserInterestsView: View {
         }
     }
     
+    // MARK: - Edit Interests (By Category)
+    private var editInterestsView: some View {
+        VStack(spacing: 0) {
+            ScrollView(showsIndicators: false) {
+                VStack(alignment: .leading, spacing: 24) {
+                    VStack(alignment: .leading, spacing: 8) {
+                        Text("Select Your Interests")
+                            .font(.system(size: 20, weight: .bold))
+                            .foregroundColor(.primary)
+                        
+                        Text("Tap to add or remove interests")
+                            .font(.system(size: 14))
+                            .foregroundColor(.secondary)
+                    }
+                    .padding(.horizontal, 20)
+                    .padding(.top, 20)
+                    
+                    // Categories with interests
+                    ForEach(interestCategories.keys.sorted(), id: \.self) { category in
+                        VStack(alignment: .leading, spacing: 12) {
+                            Text(category)
+                                .font(.system(size: 16, weight: .bold))
+                                .foregroundColor(.primary)
+                                .padding(.horizontal, 20)
+                            
+                            LazyVGrid(
+                                columns: [
+                                    GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 12)
+                                ],
+                                spacing: 12
+                            ) {
+                                ForEach(interestCategories[category] ?? [], id: \.self) { interest in
+                                    EditableInterestTag(
+                                        interest: interest,
+                                        isSelected: userInterests.contains(interest),
+                                        action: {
+                                            toggleInterest(interest)
+                                        }
+                                    )
+                                }
+                            }
+                            .padding(.horizontal, 20)
+                        }
+                    }
+                    
+                    Spacer(minLength: 20)
+                }
+                .padding(.bottom, 100)
+            }
+            
+            VStack(spacing: 12) {
+                Divider()
+                
+                Button(action: saveInterests) {
+                    if isSaving {
+                        ProgressView()
+                            .progressViewStyle(CircularProgressViewStyle())
+                            .frame(height: 50)
+                    } else {
+                        Text("Save Interests")
+                            .font(.system(size: 16, weight: .semibold))
+                            .foregroundColor(.white)
+                            .frame(maxWidth: .infinity)
+                            .frame(height: 50)
+                    }
+                }
+                .disabled(isSaving)
+                .background(Color.appPrimary)
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
+                
+                Button(action: { isEditing = false }) {
+                    Text("Cancel")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundColor(.appPrimary)
+                        .frame(maxWidth: .infinity)
+                        .frame(height: 50)
+                        .background(Color.appPrimary.opacity(0.1))
+                        .cornerRadius(12)
+                }
+                .padding(.horizontal, 20)
+                .padding(.bottom, 20)
+            }
+            .background(Color(.systemBackground))
+        }
+    }
+    
+    private func toggleInterest(_ interest: String) {
+        if userInterests.contains(interest) {
+            userInterests.removeAll { $0 == interest }
+        } else {
+            userInterests.append(interest)
+        }
+    }
+    
     private func loadUserInterests() {
         isLoading = true
         
-        // Simulate async loading
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             if let userId = authVM.user?.uid {
                 userInterests = interestVM.getInterestsArray(userId: userId)
@@ -295,12 +398,28 @@ struct UserInterestsView: View {
             isLoading = false
         }
     }
+    
+    private func saveInterests() {
+        isSaving = true
+        
+        if let userId = authVM.user?.uid {
+            interestVM.saveUserInterests(userInterests, for: userId)
+        }
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+            isSaving = false
+            isEditing = false
+        }
+    }
 }
 
-// MARK: - Custom Sheet Header
+// MARK: - Custom Sheet Header (Updated)
 struct CustomSheetHeader: View {
     let title: String
     var onClose: () -> Void
+    var editAction: () -> Void
+    var isEditing: Bool
+    var isSaving: Bool
     
     var body: some View {
         HStack {
@@ -309,6 +428,14 @@ struct CustomSheetHeader: View {
                 .foregroundColor(.primary)
             
             Spacer()
+            
+            if !isEditing {
+                Button(action: editAction) {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 28))
+                        .foregroundColor(.appPrimary)
+                }
+            }
             
             Button(action: onClose) {
                 Image(systemName: "xmark.circle.fill")
@@ -326,7 +453,7 @@ struct CustomSheetHeader: View {
     }
 }
 
-// MARK: - Interest Tag Component (IMPROVED)
+// MARK: - Interest Tag (Display)
 struct InterestTag: View {
     let interest: String
     
@@ -353,6 +480,47 @@ struct InterestTag: View {
             RoundedRectangle(cornerRadius: 10)
                 .strokeBorder(Color.appPrimary.opacity(0.3), lineWidth: 1)
         )
+    }
+}
+
+// MARK: - Editable Interest Tag
+struct EditableInterestTag: View {
+    let interest: String
+    let isSelected: Bool
+    let action: () -> Void
+    
+    var body: some View {
+        Button(action: action) {
+            VStack(spacing: 8) {
+                HStack {
+                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 24))
+                        .foregroundColor(isSelected ? .appPrimary : .gray.opacity(0.5))
+                    
+                    Spacer()
+                }
+                
+                Text(interest)
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundColor(isSelected ? .primary : .secondary)
+                    .lineLimit(2)
+                
+                Spacer()
+            }
+            .padding(12)
+            .frame(minHeight: 110)
+            .background(
+                RoundedRectangle(cornerRadius: 12)
+                    .fill(isSelected ? Color.appPrimary.opacity(0.15) : Color.gray.opacity(0.05))
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 12)
+                    .strokeBorder(
+                        isSelected ? Color.appPrimary : Color.gray.opacity(0.2),
+                        lineWidth: isSelected ? 2 : 1
+                    )
+            )
+        }
     }
 }
 
@@ -446,7 +614,7 @@ private struct ProfileMenuList: View {
     }
 }
 
-// MARK: - Navigation Row (Unchanged)
+// MARK: - Navigation Row
 private struct NavigationRow: View {
     var icon: String
     var title: String
@@ -479,9 +647,7 @@ private struct NavigationRow: View {
     }
 }
 
-
-
-// Edit Profile Sheet
+// MARK: - Edit Profile Sheet
 struct EditProfileView: View {
     @ObservedObject var authVM: AuthViewModel
     @Binding var isPresented: Bool

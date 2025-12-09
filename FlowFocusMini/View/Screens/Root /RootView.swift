@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel = TaskViewModel(apiKey: Config.openaiAPIKey)
     @EnvironmentObject private var authVM: AuthViewModel
+    @EnvironmentObject private var notificationVM: NotificationViewModel
     @EnvironmentObject private var interestVM: InterestViewModel
 
     @State private var selectedTab = 0
@@ -61,14 +62,33 @@ struct RootView: View {
                 }
                 .offset(y: -20)
             }
+            
+            // MARK: - Toast Notification Overlay
+            if notificationVM.showToast, let notification = notificationVM.toastNotification {
+                VStack {
+                    ToastNotificationView(
+                        notification: notification,
+                        onDismiss: {
+                            notificationVM.dismissToast()
+                        }
+                    )
+                    
+                    Spacer()
+                }
+                .padding(.top, 60)
+                .zIndex(1000)
+                .transition(.move(edge: .top).combined(with: .opacity))
+            }
         }
         .environmentObject(viewModel)
         .sheet(isPresented: $showAddTask) {
             AddTaskView()
                 .environmentObject(viewModel)
+                .environmentObject(notificationVM)
         }
         .onAppear {
             viewModel.setModelContext(modelContext)
+            notificationVM.setModelContext(modelContext)
         }
     }
 }
@@ -78,4 +98,5 @@ struct RootView: View {
         .modelContainer(for: TodoTask.self)
         .environmentObject(AuthViewModel())
         .environmentObject(InterestViewModel(modelContext: ModelContext(try! ModelContainer(for: UserInterests.self))))
+        .environmentObject(NotificationViewModel())
 }

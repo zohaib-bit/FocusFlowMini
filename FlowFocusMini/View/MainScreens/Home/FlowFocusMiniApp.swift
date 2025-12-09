@@ -24,18 +24,24 @@ struct FlowFocusMiniApp: App {
 
     @StateObject private var taskVM: TaskViewModel
     @StateObject private var authVM = AuthViewModel()
+    @StateObject private var notificationVM: NotificationViewModel
 
     var body: some Scene {
         WindowGroup {
             AppRootView()
                 .environmentObject(taskVM)
                 .environmentObject(authVM)
+                .environmentObject(notificationVM)
                 .modelContainer(modelContainer)
         }
     }
 
     init() {
-        let schema = Schema([TodoTask.self, UserInterests.self])
+        let schema = Schema([
+            TodoTask.self,
+            UserInterests.self,
+            AppNotification.self
+        ])
         let config = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
 
         do {
@@ -47,5 +53,9 @@ struct FlowFocusMiniApp: App {
         let tempVM = TaskViewModel(modelContext: modelContainer.mainContext,
                                    apiKey: Config.openaiAPIKey)
         _taskVM = StateObject(wrappedValue: tempVM)
+        
+        let tempNotificationVM = NotificationViewModel(modelContext: modelContainer.mainContext)
+        _notificationVM = StateObject(wrappedValue: tempNotificationVM)
     }
 }
+

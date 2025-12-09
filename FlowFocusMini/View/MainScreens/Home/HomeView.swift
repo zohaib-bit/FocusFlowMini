@@ -16,7 +16,6 @@ struct HomeView: View {
     @State private var showInterestPopup = false
     @State private var hasCheckedInterests = false
     
-    // Computed properties for real-time filtering
     var inProgressTasks: [TodoTask] {
         allTasks.filter { $0.isInProgress }
     }
@@ -77,7 +76,6 @@ struct HomeView: View {
                 .navigationBarHidden(true)
             }
             
-            // Interest Popup Modal - appears after 2 seconds
             if showInterestPopup {
                 InterestPopupModal(onDismiss: {
                     showInterestPopup = false
@@ -106,8 +104,7 @@ struct HomeView: View {
     }
 }
 
-
-
+// MARK: - Background
 private struct Background: View {
     var body: some View {
         Image("bg_home")
@@ -116,6 +113,7 @@ private struct Background: View {
     }
 }
 
+// MARK: - Header
 private struct Header: View {
     var username: String
     
@@ -169,6 +167,7 @@ private struct Header: View {
     }
 }
 
+// MARK: - Today's Task Card
 private struct TodaysTaskCard: View {
     let totalTasks: Int
     let completedTasks: Int
@@ -249,6 +248,62 @@ private struct TodaysTaskCard: View {
     }
 }
 
+// MARK: - Skeleton Suggestion Card
+private struct SkeletonSuggestionCard: View {
+    @State private var isAnimating = false
+    
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            // Icon + Category skeleton
+            HStack(spacing: 8) {
+                Circle()
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 16, height: 16)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 50, height: 10)
+            }
+            
+            // Title skeleton
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.gray.opacity(0.2))
+                .frame(height: 12)
+            
+            RoundedRectangle(cornerRadius: 4)
+                .fill(Color.gray.opacity(0.2))
+                .frame(width: 100, height: 12)
+            
+            Spacer()
+            
+            // Description skeleton
+            VStack(spacing: 6) {
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(height: 10)
+                
+                RoundedRectangle(cornerRadius: 4)
+                    .fill(Color.gray.opacity(0.2))
+                    .frame(width: 80, height: 10)
+            }
+        }
+        .padding(12)
+        .frame(width: 160, height: 110)
+        .background(Color.gray.opacity(0.1))
+        .cornerRadius(14)
+        .opacity(isAnimating ? 0.6 : 1.0)
+        .onAppear {
+            withAnimation(
+                Animation.easeInOut(duration: 1.5)
+                    .repeatForever(autoreverses: true)
+            ) {
+                isAnimating = true
+            }
+        }
+    }
+}
+
+// MARK: - Simple Suggestions Section
 private struct SimpleSuggestionsSection: View {
     @EnvironmentObject private var interestVM: InterestViewModel
     @EnvironmentObject private var authVM: AuthViewModel
@@ -273,15 +328,15 @@ private struct SimpleSuggestionsSection: View {
                 Spacer()
             }
             
-            // Loading State
+            // Loading State with Skeleton
             if isLoading {
-                HStack {
-                    Spacer()
-                    ProgressView()
-                        .tint(.appPrimary)
-                    Spacer()
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 12) {
+                        ForEach(0..<3, id: \.self) { _ in
+                            SkeletonSuggestionCard()
+                        }
+                    }
                 }
-                .frame(height: 110)
             }
             // Suggestions List
             else if !suggestions.isEmpty {
@@ -341,6 +396,7 @@ private struct SimpleSuggestionsSection: View {
     }
 }
 
+// MARK: - Suggestion Card
 private struct SuggestionCard: View {
     let suggestion: SuggestedTask
     
@@ -408,6 +464,7 @@ private struct SuggestionCard: View {
     }
 }
 
+// MARK: - In Progress Section
 private struct InProgressSection: View {
     let tasks: [TodoTask]
     
@@ -442,6 +499,7 @@ private struct InProgressSection: View {
     }
 }
 
+// MARK: - Task Card
 private struct TaskCard: View {
     let task: TodoTask
     
@@ -534,6 +592,7 @@ private struct TaskCard: View {
     }
 }
 
+// MARK: - Task Groups Section
 private struct TaskGroupsSection: View {
     let allTasks: [TodoTask]
     let tasksByGroup: (String) -> [TodoTask]
@@ -566,6 +625,7 @@ private struct TaskGroupsSection: View {
     }
 }
 
+// MARK: - Task Group Card
 private struct TaskGroupCard: View {
     let title: String
     let tasks: [TodoTask]
@@ -650,6 +710,7 @@ private struct TaskGroupCard: View {
     }
 }
 
+// MARK: - Empty State Card
 private struct EmptyStateCard: View {
     let message: String
     

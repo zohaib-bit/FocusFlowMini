@@ -9,10 +9,11 @@ import SwiftUI
 
 struct AddTaskView: View {
     @EnvironmentObject private var viewModel: TaskViewModel
+    @EnvironmentObject private var notificationVM: NotificationViewModel
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
-    // --- Form fields
+    // MARK: - Form fields
     @State private var aiInput: String = ""
     @State private var taskGroup = "Work"
     @State private var projectName = ""
@@ -20,7 +21,7 @@ struct AddTaskView: View {
     @State private var startDate = Date()
     @State private var endDate = Date()
     
-    // --- UI state
+    // MARK: - UI state
     @State private var showTaskGroupDropdown = false
     @State private var showStartDatePicker = false
     @State private var showEndDatePicker = false
@@ -116,6 +117,7 @@ struct AddTaskView: View {
             if viewModel.tasks.isEmpty {
                 viewModel.setModelContext(modelContext)
             }
+            notificationVM.setModelContext(modelContext)
         }
     }
     
@@ -169,8 +171,16 @@ struct AddTaskView: View {
                     description = newTask.taskDescription
                     startDate = newTask.startDate
                     endDate = newTask.endDate
-                    
                     aiInput = ""
+                    
+                    // SHOW TOAST NOTIFICATION FOR AI GENERATION
+                    notificationVM.showToastNotification(
+                        title: "Task Generated",
+                        message: "Your AI-generated task is ready!",
+                        type: .success,
+                        taskName: projectName,
+                        duration: 3.0
+                    )
                 }
             } else {
                 showAIErrorAlert = true
@@ -190,6 +200,15 @@ struct AddTaskView: View {
         )
         
         if success {
+            // SHOW TOAST NOTIFICATION IMMEDIATELY WHEN TASK IS SAVED
+            notificationVM.showToastNotification(
+                title: "Task Created",
+                message: "Your project has been saved successfully!",
+                type: .success,
+                taskName: projectName,
+                duration: 4.0
+            )
+            
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 showSuccessAlert = true
             }

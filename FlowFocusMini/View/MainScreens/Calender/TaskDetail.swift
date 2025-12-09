@@ -63,7 +63,7 @@ struct Task_Detail: View {
             
             VStack(spacing: 0) {
                 
-                Header(dismiss: dismiss, taskCount: filteredTasks.count)
+                Header(taskCount: filteredTasks.count, dismiss: dismiss)
                     .padding(.horizontal, 20)
                     .padding(.top, 110)
                 
@@ -90,6 +90,15 @@ struct Task_Detail: View {
             }
         }
         .navigationBarHidden(true)
+        .gesture(
+            DragGesture()
+                .onEnded { value in
+                    // Swipe left to right with significant horizontal distance
+                    if value.translation.width > 50 && abs(value.translation.height) < 50 {
+                        dismiss()
+                    }
+                }
+        )
     }
 }
 
@@ -104,8 +113,8 @@ private struct Background: View {
 
 // MARK: - Header
 private struct Header: View {
-    let dismiss: DismissAction
     let taskCount: Int
+    let dismiss: DismissAction
     
     var body: some View {
         HStack {
