@@ -15,6 +15,7 @@ struct ProfileView: View {
     @EnvironmentObject private var interestVM: InterestViewModel
     @State private var showEditProfile = false
     @State private var showUserInterests = false
+    @State private var showInterestPopup = false
 
     var body: some View {
         NavigationStack{
@@ -41,21 +42,25 @@ struct ProfileView: View {
                         }
                         .padding(.horizontal, 20)
                         
-                        ProfileMenuList(showUserInterests: $showUserInterests)
+                        ProfileMenuList(showUserInterests: $showInterestPopup)
                             .padding(.top, 20)
                             .padding(.bottom, 120)
                     }
                 }
                 .padding(.top, 110)
             }
+            
+            // MARK: - Interest Popup Modal
+            if showInterestPopup {
+                EditInterestPopupModal(onDismiss: {
+                    showInterestPopup = false
+                })
+                .environmentObject(authVM)
+                .environmentObject(interestVM)
+            }
         }}
         .sheet(isPresented: $showEditProfile) {
             EditProfileView(authVM: authVM, isPresented: $showEditProfile)
-        }
-        .sheet(isPresented: $showUserInterests) {
-            UserInterestsView(isPresented: $showUserInterests)
-                .environmentObject(interestVM)
-                .environmentObject(authVM)
         }
     }
 }
@@ -154,375 +159,7 @@ private struct EditBtn: View {
     }
 }
 
-// MARK: - User Interests View (EDITABLE WITH CATEGORIES)
-struct UserInterestsView: View {
-    @EnvironmentObject private var interestVM: InterestViewModel
-    @EnvironmentObject private var authVM: AuthViewModel
-    @Binding var isPresented: Bool
-    @State private var userInterests: [String] = []
-    @State private var isLoading = true
-    @State private var isEditing = false
-    @State private var isSaving = false
-    
-    let interestCategories: [String: [String]] = [
-        "Learning & Growth": ["Reading", "Languages", "Coding", "Online Courses", "Writing"],
-        "Health & Wellness": ["Fitness", "Yoga", "Meditation", "Nutrition", "Sleep"],
-        "Daily Life": ["Cooking", "Cleaning", "Budgeting", "Shopping", "Home Repair"],
-        "Creativity & Hobbies": ["Drawing", "Music", "Photography", "Gardening", "DIY Projects"],
-        "Social & Community": ["Volunteering", "Parenting", "Pet Care", "Travel Planning"]
-    ]
-    
-    var body: some View {
-        ZStack {
-            Color(.systemBackground)
-                .ignoresSafeArea()
-            
-            VStack(spacing: 0) {
-                CustomSheetHeader(
-                    title: "My Interests",
-                    onClose: { isPresented = false },
-                    editAction: { isEditing.toggle() },
-                    isEditing: isEditing,
-                    isSaving: isSaving
-                )
-                
-                if isLoading {
-                    Spacer()
-                    ProgressView()
-                        .tint(.appPrimary)
-                    Spacer()
-                } else if isEditing {
-                    editInterestsView
-                } else if userInterests.isEmpty {
-                    emptyStateView
-                } else {
-                    interestsContentView
-                }
-            }
-        }
-        .onAppear {
-            loadUserInterests()
-        }
-    }
-    
-    // MARK: - Empty State
-    private var emptyStateView: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            
-            Image(systemName: "sparkles")
-                .font(.system(size: 60))
-                .foregroundColor(.appPrimary.opacity(0.6))
-            
-            VStack(spacing: 8) {
-                Text("No Interests Yet")
-                    .font(.system(size: 22, weight: .bold))
-                    .foregroundColor(.primary)
-                
-                Text("Tap Edit to select your interests and\npersonalize your experience")
-                    .font(.system(size: 15))
-                    .foregroundColor(.secondary)
-                    .multilineTextAlignment(.center)
-                    .lineSpacing(4)
-            }
-            
-            Spacer()
-            
-            Button(action: { isEditing = true }) {
-                Text("Add Interests")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundColor(.white)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 50)
-                    .background(Color.appPrimary)
-                    .cornerRadius(12)
-            }
-            .padding(.horizontal, 20)
-            .padding(.bottom, 30)
-        }
-    }
-    
-    // MARK: - View Interests
-    private var interestsContentView: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 20) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Your Selected Interests")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.primary)
-                        
-                        Text("\(userInterests.count) interest\(userInterests.count == 1 ? "" : "s") selected")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    
-                    LazyVGrid(
-                        columns: [
-                            GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 12)
-                        ],
-                        spacing: 12
-                    ) {
-                        ForEach(userInterests, id: \.self) { interest in
-                            InterestTag(interest: interest)
-                        }
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 100)
-                }
-            }
-            
-            VStack(spacing: 0) {
-                Divider()
-                
-                Button(action: { isPresented = false }) {
-                    Text("Close")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.white)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.appPrimary)
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 20)
-            }
-            .background(Color(.systemBackground))
-        }
-    }
-    
-    // MARK: - Edit Interests (By Category)
-    private var editInterestsView: some View {
-        VStack(spacing: 0) {
-            ScrollView(showsIndicators: false) {
-                VStack(alignment: .leading, spacing: 24) {
-                    VStack(alignment: .leading, spacing: 8) {
-                        Text("Select Your Interests")
-                            .font(.system(size: 20, weight: .bold))
-                            .foregroundColor(.primary)
-                        
-                        Text("Tap to add or remove interests")
-                            .font(.system(size: 14))
-                            .foregroundColor(.secondary)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.top, 20)
-                    
-                    // Categories with interests
-                    ForEach(interestCategories.keys.sorted(), id: \.self) { category in
-                        VStack(alignment: .leading, spacing: 12) {
-                            Text(category)
-                                .font(.system(size: 16, weight: .bold))
-                                .foregroundColor(.primary)
-                                .padding(.horizontal, 20)
-                            
-                            LazyVGrid(
-                                columns: [
-                                    GridItem(.adaptive(minimum: 150, maximum: 200), spacing: 12)
-                                ],
-                                spacing: 12
-                            ) {
-                                ForEach(interestCategories[category] ?? [], id: \.self) { interest in
-                                    EditableInterestTag(
-                                        interest: interest,
-                                        isSelected: userInterests.contains(interest),
-                                        action: {
-                                            toggleInterest(interest)
-                                        }
-                                    )
-                                }
-                            }
-                            .padding(.horizontal, 20)
-                        }
-                    }
-                    
-                    Spacer(minLength: 20)
-                }
-                .padding(.bottom, 100)
-            }
-            
-            VStack(spacing: 12) {
-                Divider()
-                
-                Button(action: saveInterests) {
-                    if isSaving {
-                        ProgressView()
-                            .progressViewStyle(CircularProgressViewStyle())
-                            .frame(height: 50)
-                    } else {
-                        Text("Save Interests")
-                            .font(.system(size: 16, weight: .semibold))
-                            .foregroundColor(.white)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 50)
-                    }
-                }
-                .disabled(isSaving)
-                .background(Color.appPrimary)
-                .cornerRadius(12)
-                .padding(.horizontal, 20)
-                
-                Button(action: { isEditing = false }) {
-                    Text("Cancel")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundColor(.appPrimary)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 50)
-                        .background(Color.appPrimary.opacity(0.1))
-                        .cornerRadius(12)
-                }
-                .padding(.horizontal, 20)
-                .padding(.bottom, 20)
-            }
-            .background(Color(.systemBackground))
-        }
-    }
-    
-    private func toggleInterest(_ interest: String) {
-        if userInterests.contains(interest) {
-            userInterests.removeAll { $0 == interest }
-        } else {
-            userInterests.append(interest)
-        }
-    }
-    
-    private func loadUserInterests() {
-        isLoading = true
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if let userId = authVM.user?.uid {
-                userInterests = interestVM.getInterestsArray(userId: userId)
-            }
-            isLoading = false
-        }
-    }
-    
-    private func saveInterests() {
-        isSaving = true
-        
-        if let userId = authVM.user?.uid {
-            interestVM.saveUserInterests(userInterests, for: userId)
-        }
-        
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-            isSaving = false
-            isEditing = false
-        }
-    }
-}
 
-// MARK: - Custom Sheet Header (Updated)
-struct CustomSheetHeader: View {
-    let title: String
-    var onClose: () -> Void
-    var editAction: () -> Void
-    var isEditing: Bool
-    var isSaving: Bool
-    
-    var body: some View {
-        HStack {
-            Text(title)
-                .font(.system(size: 24, weight: .bold))
-                .foregroundColor(.primary)
-            
-            Spacer()
-            
-            if !isEditing {
-                Button(action: editAction) {
-                    Image(systemName: "pencil.circle.fill")
-                        .font(.system(size: 28))
-                        .foregroundColor(.appPrimary)
-                }
-            }
-            
-            Button(action: onClose) {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.system(size: 28))
-                    .foregroundColor(.secondary)
-            }
-        }
-        .padding(.horizontal, 20)
-        .padding(.vertical, 16)
-        .background(Color(.systemBackground))
-        .overlay(
-            Divider()
-                .frame(maxHeight: .infinity, alignment: .bottom)
-        )
-    }
-}
-
-// MARK: - Interest Tag (Display)
-struct InterestTag: View {
-    let interest: String
-    
-    var body: some View {
-        HStack(spacing: 10) {
-            Image(systemName: "checkmark.circle.fill")
-                .font(.system(size: 16))
-                .foregroundColor(.appPrimary)
-            
-            Text(interest)
-                .font(.system(size: 15, weight: .medium))
-                .foregroundColor(.primary)
-                .lineLimit(1)
-            
-            Spacer(minLength: 0)
-        }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 14)
-        .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color.appPrimary.opacity(0.12))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .strokeBorder(Color.appPrimary.opacity(0.3), lineWidth: 1)
-        )
-    }
-}
-
-// MARK: - Editable Interest Tag
-struct EditableInterestTag: View {
-    let interest: String
-    let isSelected: Bool
-    let action: () -> Void
-    
-    var body: some View {
-        Button(action: action) {
-            VStack(spacing: 8) {
-                HStack {
-                    Image(systemName: isSelected ? "checkmark.circle.fill" : "circle")
-                        .font(.system(size: 24))
-                        .foregroundColor(isSelected ? .appPrimary : .gray.opacity(0.5))
-                    
-                    Spacer()
-                }
-                
-                Text(interest)
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundColor(isSelected ? .primary : .secondary)
-                    .lineLimit(2)
-                
-                Spacer()
-            }
-            .padding(12)
-            .frame(minHeight: 110)
-            .background(
-                RoundedRectangle(cornerRadius: 12)
-                    .fill(isSelected ? Color.appPrimary.opacity(0.15) : Color.gray.opacity(0.05))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 12)
-                    .strokeBorder(
-                        isSelected ? Color.appPrimary : Color.gray.opacity(0.2),
-                        lineWidth: isSelected ? 2 : 1
-                    )
-            )
-        }
-    }
-}
 
 // MARK: - Updated ProfileMenuList
 private struct ProfileMenuList: View {
@@ -710,4 +347,5 @@ struct EditProfileView: View {
     ProfileView()
         .environmentObject(TaskViewModel(apiKey: Config.openaiAPIKey))
         .environmentObject(AuthViewModel())
+        .environmentObject(InterestViewModel(modelContext: ModelContext(try! ModelContainer(for: UserInterests.self))))
 }
