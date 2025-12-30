@@ -9,11 +9,18 @@ import SwiftUI
 
 struct AddTaskView: View {
     @EnvironmentObject private var viewModel: TaskViewModel
+<<<<<<< HEAD
     @EnvironmentObject private var notificationVM: NotificationViewModel
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     
     // MARK: - Form fields
+=======
+    @Environment(\.modelContext) private var modelContext
+    @Environment(\.dismiss) private var dismiss
+    
+    // --- Form fields
+>>>>>>> main
     @State private var aiInput: String = ""
     @State private var taskGroup = "Work"
     @State private var projectName = ""
@@ -21,7 +28,11 @@ struct AddTaskView: View {
     @State private var startDate = Date()
     @State private var endDate = Date()
     
+<<<<<<< HEAD
     // MARK: - UI state
+=======
+    // --- UI state
+>>>>>>> main
     @State private var showTaskGroupDropdown = false
     @State private var showStartDatePicker = false
     @State private var showEndDatePicker = false
@@ -45,7 +56,43 @@ struct AddTaskView: View {
                     VStack() {
                         
                         // ===== AI Input Field
+<<<<<<< HEAD
                         aiInputFieldView()
+=======
+                        VStack(alignment: .leading, spacing: 8) {
+                            Text("AI Input")
+                                .font(.system(size: 13))
+                                .foregroundColor(.secondary)
+                            
+                            TextField("Describe the task (e.g. 'Create Task for client tomorrow 5pm for Marketing project')", text: $aiInput, axis: .vertical)
+                                .padding(12)
+                                .background(Color.white)
+                                .cornerRadius(12)
+                                .lineLimit(3...6)
+                            
+                            HStack {
+                                Spacer()
+                                // Generate with AI button
+                                Button(action: generateWithAI) {
+                                    if viewModel.isGeneratingWithAI {
+                                        ProgressView()
+                                            .progressViewStyle(CircularProgressViewStyle())
+                                            .frame(height: 36)
+                                            .frame(maxWidth: 140)
+                                    } else {
+                                        Text("Generate with AI")
+                                            .font(.system(size: 14, weight: .semibold))
+                                            .frame(height: 36)
+                                            .frame(maxWidth: 140)
+                                    }
+                                }
+                                .disabled(aiInput.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isGeneratingWithAI)
+                                .background(viewModel.isGeneratingWithAI ? Color.gray.opacity(0.4) : Color.appPrimary)
+                                .foregroundColor(.white)
+                                .cornerRadius(10)
+                            }
+                        }
+>>>>>>> main
                         
                         // ===== Existing Form Fields
                         TaskGroupDropdown(
@@ -117,6 +164,7 @@ struct AddTaskView: View {
             if viewModel.tasks.isEmpty {
                 viewModel.setModelContext(modelContext)
             }
+<<<<<<< HEAD
             notificationVM.setModelContext(modelContext)
         }
     }
@@ -155,11 +203,14 @@ struct AddTaskView: View {
                 .foregroundColor(.white)
                 .cornerRadius(10)
             }
+=======
+>>>>>>> main
         }
     }
     
     // MARK: - Actions
     
+<<<<<<< HEAD
     private func generateWithAI() {
         hideKeyboard()
         Task {
@@ -188,6 +239,8 @@ struct AddTaskView: View {
         }
     }
     
+=======
+>>>>>>> main
     private func saveTask() {
         hideKeyboard()
         
@@ -200,6 +253,7 @@ struct AddTaskView: View {
         )
         
         if success {
+<<<<<<< HEAD
             // SHOW TOAST NOTIFICATION IMMEDIATELY WHEN TASK IS SAVED
             notificationVM.showToastNotification(
                 title: "Task Created",
@@ -209,6 +263,8 @@ struct AddTaskView: View {
                 duration: 4.0
             )
             
+=======
+>>>>>>> main
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                 showSuccessAlert = true
             }
@@ -224,8 +280,33 @@ struct AddTaskView: View {
         taskGroup = "Work"
         startDate = Date()
         endDate = Date()
+<<<<<<< HEAD
+=======
+    }
+    
+    private func generateWithAI() {
+        hideKeyboard()
+        Task {
+            let success = await self.viewModel.generateTaskFromAI(input: self.aiInput)
+            if success {
+                if let newTask = self.viewModel.tasks.first {
+                    self.taskGroup = newTask.taskGroup
+                    self.projectName = newTask.projectName
+                    self.description = newTask.taskDescription
+                    self.startDate = newTask.startDate
+                    self.endDate = newTask.endDate
+                    
+                    self.aiInput = ""
+                    self.showSuccessAlert = true
+                }
+            } else {
+                self.showAIErrorAlert = true
+            }
+        }
+>>>>>>> main
     }
 }
+// MARK: - Helpers + Subviews
 
 // MARK: - Helpers + Subviews
 
@@ -251,6 +332,10 @@ private struct Header: View {
         GeometryReader { geo in
             let totalWidth = geo.size.width
             HStack(spacing: 0) {
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
                 Button(action: {
                     dismiss()
                 }) {
@@ -267,6 +352,23 @@ private struct Header: View {
                         .foregroundColor(.primary)
                 }
                 .frame(width: totalWidth * 0.33, alignment: .center)
+<<<<<<< HEAD
+=======
+
+                Button(action: {}) {
+                    ZStack(alignment: .topTrailing) {
+                        Image(systemName: "bell")
+                            .font(.system(size: 22))
+                            .foregroundColor(.black)
+
+                        Circle()
+                            .fill(Color.appPrimary)
+                            .frame(width: 8, height: 8)
+                            .offset(x: 4, y: -4)
+                    }
+                }
+                .frame(width: totalWidth * 0.33, alignment: .trailing)
+>>>>>>> main
             }
         }
         .frame(height: 40)
@@ -281,6 +383,10 @@ private struct TaskGroupDropdown: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
             HStack {
                 Text("Task Group")
                     .font(.system(size: 13))
@@ -291,6 +397,7 @@ private struct TaskGroupDropdown: View {
                 Image(systemName: isExpanded ? "chevron.up" : "chevron.down")
                     .font(.system(size: 18))
                     .foregroundColor(.black)
+                    .frame(alignment: .center)
             }
 
             HStack {
@@ -375,6 +482,10 @@ private struct DatePickerCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
+<<<<<<< HEAD
+=======
+
+>>>>>>> main
             Text(title)
                 .font(.system(size: 13))
                 .foregroundColor(.secondary)

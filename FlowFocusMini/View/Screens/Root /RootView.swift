@@ -4,10 +4,14 @@ import SwiftData
 struct RootView: View {
     @Environment(\.modelContext) private var modelContext
     @StateObject private var viewModel = TaskViewModel(apiKey: Config.openaiAPIKey)
+<<<<<<< HEAD
     @EnvironmentObject private var authVM: AuthViewModel
     @EnvironmentObject private var notificationVM: NotificationViewModel
     @EnvironmentObject private var interestVM: InterestViewModel
 
+=======
+    
+>>>>>>> main
     @State private var selectedTab = 0
     @State private var showAddTask = false
 
@@ -29,6 +33,10 @@ struct RootView: View {
                         Image(systemName: "calendar")
                             .frame(width: 24, height: 24)
                     }
+<<<<<<< HEAD
+=======
+                
+>>>>>>> main
 
                 DocumentView()
                     .tag(1)
@@ -80,6 +88,7 @@ struct RootView: View {
                 .transition(.move(edge: .top).combined(with: .opacity))
             }
         }
+<<<<<<< HEAD
         .environmentObject(viewModel)
         .sheet(isPresented: $showAddTask) {
             AddTaskView()
@@ -89,6 +98,15 @@ struct RootView: View {
         .onAppear {
             viewModel.setModelContext(modelContext)
             notificationVM.setModelContext(modelContext)
+=======
+        .environmentObject(viewModel)  // ← CRITICAL: This injects ViewModel
+        .sheet(isPresented: $showAddTask) {
+            Client_Interest()
+                .environmentObject(viewModel)  // ← CRITICAL: Re-inject for sheet
+        }
+        .onAppear {
+            viewModel.setModelContext(modelContext)
+>>>>>>> main
         }
     }
 }
@@ -96,7 +114,10 @@ struct RootView: View {
 #Preview {
     RootView()
         .modelContainer(for: TodoTask.self)
+<<<<<<< HEAD
         .environmentObject(AuthViewModel())
         .environmentObject(InterestViewModel(modelContext: ModelContext(try! ModelContainer(for: UserInterests.self))))
         .environmentObject(NotificationViewModel())
+=======
+>>>>>>> main
 }
