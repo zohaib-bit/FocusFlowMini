@@ -1,6 +1,3 @@
-<<<<<<< HEAD
-=======
-
 //
 //  Client Interest.swift
 //  FlowFocusMini
@@ -8,27 +5,21 @@
 //  Created by o9tech on 26/11/2025.
 //
 
->>>>>>> main
 import SwiftUI
 
 struct Client_Interest: View {
     @State private var selectedInterests: Set<String> = []
-<<<<<<< HEAD
     @EnvironmentObject var authVM: AuthViewModel
     @EnvironmentObject var interestVM: InterestViewModel
     @Environment(\.dismiss) var dismiss
     
     let maxInterests = 5
-=======
-    
-    let maxInterests = 20
->>>>>>> main
     let interestCategories: [String: [String]] = [
-        " Learning & Growth": ["Reading", "Languages", "Coding", "Online Courses", "Writing"],
-        " Health & Wellness": ["Fitness", "Yoga", "Meditation", "Nutrition", "Sleep"],
-        " Daily Life": ["Cooking", "Cleaning", "Budgeting", "Shopping", "Home Repair"],
-        " Creativity & Hobbies": ["Drawing", "Music", "Photography", "Gardening", "DIY Projects"],
-        " Social & Community": ["Volunteering", "Parenting", "Pet Care", "Travel Planning"]
+        "📚 Learning & Growth": ["Reading", "Languages", "Coding", "Online Courses", "Writing"],
+        "💪 Health & Wellness": ["Fitness", "Yoga", "Meditation", "Nutrition", "Sleep"],
+        "🏠 Daily Life": ["Cooking", "Cleaning", "Budgeting", "Shopping", "Home Repair"],
+        "🎨 Creativity & Hobbies": ["Drawing", "Music", "Photography", "Gardening", "DIY Projects"],
+        "👥 Social & Community": ["Volunteering", "Parenting", "Pet Care", "Travel Planning"]
     ]
     
     var isNextDisabled: Bool {
@@ -37,10 +28,7 @@ struct Client_Interest: View {
     
     var body: some View {
         ZStack {
-<<<<<<< HEAD
-=======
             // Background
->>>>>>> main
             Background()
                 .ignoresSafeArea()
             
@@ -100,7 +88,6 @@ struct Client_Interest: View {
                 
                 // Footer Buttons
                 VStack(spacing: 12) {
-<<<<<<< HEAD
                     Button(action: saveInterestsAndNavigate) {
                         if interestVM.isLoading {
                             ProgressView()
@@ -116,23 +103,10 @@ struct Client_Interest: View {
                     .foregroundColor(.white)
                     .cornerRadius(10)
                     .disabled(isNextDisabled || interestVM.isLoading)
-=======
-                    Button(action: {}) {
-                        Text("Next")
-                            .font(.system(size: 16, weight: .semibold))
-                            .frame(maxWidth: .infinity)
-                            .padding(14)
-                            .background(isNextDisabled ? Color.gray.opacity(0.3) : Color.appPrimary)
-                            .foregroundColor(.white)
-                            .cornerRadius(10)
-                    }
-                    .disabled(isNextDisabled)
->>>>>>> main
                 }
                 .padding(20)
             }
         }
-<<<<<<< HEAD
         .alert("Error", isPresented: .constant(!interestVM.errorMessage.isEmpty)) {
             Button("OK") {
                 interestVM.errorMessage = ""
@@ -140,8 +114,6 @@ struct Client_Interest: View {
         } message: {
             Text(interestVM.errorMessage)
         }
-=======
->>>>>>> main
     }
     
     private func toggleInterest(_ interest: String) {
@@ -151,7 +123,6 @@ struct Client_Interest: View {
             selectedInterests.insert(interest)
         }
     }
-<<<<<<< HEAD
     
     private func saveInterestsAndNavigate() {
         guard let userId = authVM.user?.uid else {
@@ -171,11 +142,7 @@ struct Client_Interest: View {
     }
 }
 
-// MARK: - InterestChip (for Client_Interest onboarding)
-=======
-}
-
->>>>>>> main
+// MARK: - InterestChip
 struct InterestChip: View {
     let interest: String
     let isSelected: Bool
@@ -184,15 +151,6 @@ struct InterestChip: View {
     
     var body: some View {
         Button(action: action) {
-<<<<<<< HEAD
-            Text(interest)
-                .font(.system(size: 14, weight: .medium))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(isSelected ? Color.appPrimary : Color.gray.opacity(0.1))
-                .foregroundColor(isSelected ? .white : .black)
-                .cornerRadius(8)
-=======
             HStack(spacing: 6) {
                 if isSelected {
                     Image(systemName: "checkmark.circle.fill")
@@ -206,53 +164,14 @@ struct InterestChip: View {
             .background(isSelected ? Color.appPrimary : Color.gray.opacity(0.1))
             .foregroundColor(isSelected ? .white : .black)
             .cornerRadius(8)
->>>>>>> main
         }
         .disabled(isDisabled)
         .opacity(isDisabled ? 0.5 : 1.0)
     }
 }
 
-<<<<<<< HEAD
-=======
-struct FlowLayout: Layout {
-    var spacing: CGFloat = 8
-    
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
-        var height: CGFloat = 0
-        var currentRowWidth: CGFloat = 0
-        let availableWidth = proposal.width ?? 0
-        
-        for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
-            if currentRowWidth + spacing + size.width > availableWidth {
-                height += size.height + spacing
-                currentRowWidth = size.width
-            } else {
-                currentRowWidth += (currentRowWidth > 0 ? spacing : 0) + size.width
-            }
-        }
-        height += subviews.first?.sizeThatFits(.unspecified).height ?? 0
-        return CGSize(width: availableWidth, height: height)
-    }
-    
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
-        var x: CGFloat = bounds.minX
-        var y: CGFloat = bounds.minY
-        
-        for view in subviews {
-            let size = view.sizeThatFits(.unspecified)
-            if x + size.width > bounds.maxX && x > bounds.minX {
-                x = bounds.minX
-                y += size.height + spacing
-            }
-            view.place(at: CGPoint(x: x, y: y), proposal: .unspecified)
-            x += size.width + spacing
-        }
-    }
-}
+// REMOVE THE FlowLayout STRUCT - IT'S IN FlowLayout.swift ALREADY
 
->>>>>>> main
 private struct Background: View {
     var body: some View {
         Image("bg_home")
@@ -260,10 +179,7 @@ private struct Background: View {
             .scaledToFill()
     }
 }
-<<<<<<< HEAD
-=======
 
 #Preview {
     Client_Interest()
 }
->>>>>>> main

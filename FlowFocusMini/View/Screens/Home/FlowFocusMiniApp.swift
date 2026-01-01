@@ -19,6 +19,7 @@ class AppDelegate: NSObject, UIApplicationDelegate {
 
 @main
 struct FlowFocusMiniApp: App {
+    @StateObject private var notificationVM = NotificationViewModel() // ADD THIS
     @UIApplicationDelegateAdaptor(AppDelegate.self) var delegate
     let modelContainer: ModelContainer
 
@@ -31,6 +32,8 @@ struct FlowFocusMiniApp: App {
                 .environmentObject(taskVM)
                 .environmentObject(authVM)
                 .modelContainer(modelContainer)
+                .environmentObject(notificationVM) // ADD THIS
+
         }
     }
 

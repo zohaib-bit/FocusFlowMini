@@ -11,8 +11,6 @@ import SwiftData
 // ONLY USE THIS IF YOU DON'T HAVE YOUR OWN APP FILE
 // Otherwise, just add .modelContainer(for: Task.self) to your existing FlowFocusMiniApp
 
-<<<<<<< HEAD
-=======
 struct TaskManagerApp: App {
     var body: some Scene {
         WindowGroup {
@@ -21,7 +19,6 @@ struct TaskManagerApp: App {
         .modelContainer(for: TodoTask.self)
     }
 }
->>>>>>> main
 
 // Main ContentView with TabView
 struct ContentView: View {
